@@ -49,11 +49,27 @@ async function renderEvents(events) {
     const name = nft.name || `#${nft.identifier || "?"}`;
     const priceInfo = getPaymentInfo(maxEvent);
     const priceStr = priceInfo.str || "";
+    const thumbUrl =
+      nft.display_image_url ||
+      nft.image_url ||
+      "";
+
     highEl.style.display = "";
     highEl.innerHTML = `
-      <div class="label">SESSION HIGH</div>
-      <div class="value">
-        ${priceStr ? sanitize(priceStr) + " • " : ""}${sanitize(name)}
+      <div class="high-sale-row">
+        <div class="high-thumb-wrapper">
+          ${
+            thumbUrl
+              ? `<img class="high-thumb" src="${sanitize(thumbUrl)}" alt="" />`
+              : ""
+          }
+        </div>
+        <div class="high-sale-text">
+          <div class="label">SESSION HIGH</div>
+          <div class="value">
+            ${priceStr ? sanitize(priceStr) + " • " : ""}${sanitize(name)}
+          </div>
+        </div>
       </div>
     `;
   } else {
