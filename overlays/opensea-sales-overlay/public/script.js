@@ -77,6 +77,7 @@ async function renderEvents(events) {
 
     // Timestamp
     const ts = ev.event_timestamp || ev.closing_date;
+    const dateStr = ts ? formatDateUnixSeconds(ts) : "";
     const timeStr = ts ? formatUnixSeconds(ts) : "";
 
     const type = ev.event_type || "sale";
@@ -117,10 +118,12 @@ async function renderEvents(events) {
                 : ""
             }
           </div>
-          <span class="meta">
+                    <span class="meta">
             ${sanitize(type)}${
       priceStr ? " • " + sanitize(priceStr) : ""
-    }${timeStr ? " • " + sanitize(timeStr) : ""}
+    }${dateStr ? " • " + sanitize(dateStr) : ""}${
+      timeStr ? " • " + sanitize(timeStr) : ""
+    }
           </span>
           ${
             directionStr
@@ -240,6 +243,33 @@ function formatUnixSeconds(sec) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function formatDateUnixSeconds(sec) {
+  const d = new Date(sec * 1000);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const weekday = d.toLocaleDateString(undefined, { weekday: "long" });
+  const month = d.toLocaleDateString(undefined, { month: "long" });
+  const day = d.getDate();
+  const suffix = getOrdinalSuffix(day);
+
+  return `${weekday}, ${month} ${day}${suffix}`;
+}
+
+function getOrdinalSuffix(n) {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return "th";
+  switch (n % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
 }
 
 function sanitize(str) {
