@@ -1,8 +1,8 @@
 // ==== CONFIG ====
-const COLLECTION_SLUG = "off-the-grid";       // OpenSea collection slug
-const POLL_INTERVAL_MS = 15000;               // 15 seconds
-const MAX_ITEMS = 5;
-const API_PATH = "/api/opensea-sales.js";     // IMPORTANT: .js route
+const COLLECTION_SLUG = "off-the-grid";      // OpenSea collection slug
+const POLL_INTERVAL_MS = 15000;              // 15 seconds
+const MAX_ITEMS = 10;
+const API_PATH = "/api/opensea-sales.js";    // Vercel function route
 
 // ==== CORE LOGIC ====
 
@@ -19,13 +19,9 @@ async function fetchEvents() {
       headers: { Accept: "application/json" }
     });
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-
-    // OpenSea v2 returns an `asset_events` array for collection events
     const events = data.asset_events || data.events || [];
 
     console.log("Proxy events:", events);
@@ -51,24 +47,26 @@ function renderEvents(events) {
   events.slice(0, MAX_ITEMS).forEach((ev) => {
     const li = document.createElement("li");
 
-    // Try to pull a readable name
+    // Name
     const name =
       ev?.nft?.metadata?.name ||
       ev?.nft?.name ||
       ev?.asset?.name ||
-      "Unknown item";
+      `#${ev?.nft?.identifier || "?"}`;
 
-    // Payment / price
+    // Rarity
+    const rarityInfo = extractRarity(ev);
+
+    // Price (2 decimals)
     const quantityRaw = ev?.payment?.quantity;
     const decimals = Number(ev?.payment?.token?.decimals ?? 18);
     const symbol = ev?.payment?.token?.symbol || "";
     let priceStr = "";
 
     if (quantityRaw) {
-      // quantityRaw is usually a string of the smallest unit
-      const qty = Number(quantityRaw) / Math.pow(10, decimals);
-      if (!Number.isNaN(qty)) {
-        priceStr = `${qty.toFixed(4)} ${symbol}`.trim();
+      const qtyNum = Number(quantityRaw) / Math.pow(10, decimals);
+      if (!Number.isNaN(qtyNum)) {
+        priceStr = `${qtyNum.toFixed(2)} ${symbol}`.trim();
       }
     }
 
@@ -78,22 +76,136 @@ function renderEvents(events) {
       ev?.transaction?.timestamp ||
       ev?.transaction?.created_date ||
       ev?.created_date;
-
     const timeStr = ts ? formatTime(ts) : "";
 
     const type = ev.event_type || "sale";
 
+    // Direction: seller -> buyer
+    const sellerStr = formatAccount(ev?.seller || ev?.from_account);
+    const buyerStr = formatAccount(ev?.buyer || ev?.to_account);
+    const directionStr =
+      sellerStr && buyerStr ? `${sellerStr} → ${buyerStr}` : "";
+
+    // Thumbnail
+    const thumbUrl =
+      ev?.nft?.display_image_url ||
+      ev?.nft?.image_url ||
+      ev?.asset?.image_url ||
+      "";
+
+    const rarityClass = rarityInfo ? rarityInfo.className : "other";
+
+    li.className = `rarity-${sanitize(rarityClass)}`;
+
     li.innerHTML = `
-      <span class="item-name">${sanitize(name)}</span>
-      <span class="meta">
-        ${sanitize(type)}${priceStr ? " • " + sanitize(priceStr) : ""}${
-      timeStr ? " • " + sanitize(timeStr) : ""
-    }
-      </span>
+      <div class="item-row">
+        <div class="thumb-wrapper">
+          ${
+            thumbUrl
+              ? `<img class="thumb" src="${sanitize(thumbUrl)}" alt="" />`
+              : ""
+          }
+        </div>
+        <div class="item-content">
+          <div class="item-header">
+            <span class="item-name">${sanitize(name)}</span>
+            ${
+              rarityInfo
+                ? `<span class="rarity-pill rarity-${sanitize(
+                    rarityClass
+                  )}">${sanitize(rarityInfo.label)}</span>`
+                : ""
+            }
+          </div>
+          <span class="meta">
+            ${sanitize(type)}${
+      priceStr ? " • " + sanitize(priceStr) : ""
+    }${timeStr ? " • " + sanitize(timeStr) : ""}
+          </span>
+          ${
+            directionStr
+              ? `<span class="direction">${sanitize(directionStr)}</span>`
+              : ""
+          }
+        </div>
+      </div>
     `;
 
     ul.appendChild(li);
   });
+}
+
+// ==== HELPERS ====
+
+// Rarity: read from metadata attributes/traits, normalize to 4 tiers
+function extractRarity(ev) {
+  const sources = [
+    ev?.nft?.metadata?.attributes,
+    ev?.nft?.metadata?.traits,
+    ev?.nft?.traits,
+    ev?.asset?.traits
+  ].filter(Array.isArray);
+
+  const attrs = sources.flat();
+  if (!attrs.length) return null;
+
+  const rarityAttr = attrs.find((attr) => {
+    const key = (
+      attr.trait_type ||
+      attr.type ||
+      attr.name ||
+      ""
+    )
+      .toString()
+      .toLowerCase();
+    return (
+      key.includes("rarity") ||
+      key.includes("tier") ||
+      key.includes("grade") ||
+      key.includes("quality")
+    );
+  });
+
+  if (!rarityAttr) return null;
+
+  const raw = String(
+    rarityAttr.value ?? rarityAttr.trait_type ?? rarityAttr.name ?? ""
+  ).trim();
+  if (!raw) return null;
+
+  const lower = raw.toLowerCase();
+  let className = "other";
+
+  if (lower.includes("common") && !lower.includes("uncommon")) className = "common";
+  else if (lower.includes("uncommon")) className = "uncommon";
+  else if (lower.includes("epic")) className = "epic";
+  else if (lower.includes("rare")) className = "rare";
+
+  return {
+    label: raw,
+    className
+  };
+}
+
+function formatAccount(entity) {
+  if (!entity) return "";
+
+  const username =
+    entity.user?.username ||
+    entity.display_name ||
+    entity.profile_name ||
+    "";
+
+  if (username && username.trim().length > 0) {
+    return username.trim();
+  }
+
+  const addr = entity.address || entity.wallet_address;
+  if (!addr || typeof addr !== "string") return "";
+
+  const trimmed = addr.replace(/^0x/, "");
+  const last4 = trimmed.slice(-4);
+  return `…${last4}`;
 }
 
 function formatTime(timestamp) {
