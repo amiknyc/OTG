@@ -1,8 +1,11 @@
 // ==== CONFIG ====
-const COLLECTION_SLUG = "off-the-grid";      // OpenSea collection slug
-const POLL_INTERVAL_MS = 15000;              // 15 seconds
+const COLLECTION_SLUG = "off-the-grid"; // OpenSea collection slug
+const POLL_INTERVAL_MS = 15000;         // 15 seconds
 const MAX_ITEMS = 10;
-const API_PATH = "/api/opensea-sales.js";    // Vercel function route
+const API_PATH = "/api/opensea-sales.js"; // Vercel function route
+
+// Cache rarity per NFT to avoid refetching metadata
+const rarityCache = new Map(); // key: metadata_url or collection:id -> { label, className } | null
 
 // ==== CORE LOGIC ====
 
@@ -25,16 +28,14 @@ async function fetchEvents() {
     const events = data.asset_events || data.events || [];
 
     console.log("Proxy events:", events);
-    renderEvents(events);
+    await renderEvents(events);
   } catch (err) {
     console.error("Error fetching via proxy:", err);
     errorEl.textContent = "Error loading sales feed";
   }
 }
 
-window.__lastEvents = events;
-
-function renderEvents(events) {
+async function renderEvents(events) {
   const ul = document.getElementById("events");
   ul.innerHTML = "";
 
@@ -46,25 +47,27 @@ function renderEvents(events) {
     return;
   }
 
-  events.slice(0, MAX_ITEMS).forEach((ev) => {
+  const slice = events.slice(0, MAX_ITEMS);
+
+  for (const ev of slice) {
     const li = document.createElement("li");
 
     // Name
+    const nft = ev?.nft || {};
     const name =
-      ev?.nft?.metadata?.name ||
-      ev?.nft?.name ||
-      ev?.asset?.name ||
-      `#${ev?.nft?.identifier || "?"}`;
+      nft.name ||
+      `#${nft.identifier || "?"}`;
 
-    // Rarity
-    const rarityInfo = extractRarity(ev);
+    // Rarity from metadata_url (cached)
+    const rarityInfo = await getRarityForEvent(ev);
 
-    // Price (2 decimals)
-    const quantityRaw = ev?.payment?.quantity;
-    const decimals = Number(ev?.payment?.token?.decimals ?? 18);
-    const symbol = ev?.payment?.token?.symbol || "";
+    // Price (2 decimals) – note OTG shape: payment.quantity, payment.decimals, payment.symbol
+    const payment = ev?.payment || {};
+    const quantityRaw = payment.quantity;
+    const decimals = Number(payment.decimals ?? 18);
+    const symbol = payment.symbol || "";
+
     let priceStr = "";
-
     if (quantityRaw) {
       const qtyNum = Number(quantityRaw) / Math.pow(10, decimals);
       if (!Number.isNaN(qtyNum)) {
@@ -73,26 +76,21 @@ function renderEvents(events) {
     }
 
     // Timestamp
-    const ts =
-      ev.event_timestamp ||
-      ev?.transaction?.timestamp ||
-      ev?.transaction?.created_date ||
-      ev?.created_date;
-    const timeStr = ts ? formatTime(ts) : "";
+    const ts = ev.event_timestamp || ev.closing_date;
+    const timeStr = ts ? formatUnixSeconds(ts) : "";
 
     const type = ev.event_type || "sale";
 
-    // Direction: seller -> buyer
-    const sellerStr = formatAccount(ev?.seller || ev?.from_account);
-    const buyerStr = formatAccount(ev?.buyer || ev?.to_account);
+    // Direction: seller -> buyer (addresses only)
+    const sellerStr = formatAddress(ev.seller);
+    const buyerStr = formatAddress(ev.buyer);
     const directionStr =
       sellerStr && buyerStr ? `${sellerStr} → ${buyerStr}` : "";
 
     // Thumbnail
     const thumbUrl =
-      ev?.nft?.display_image_url ||
-      ev?.nft?.image_url ||
-      ev?.asset?.image_url ||
+      nft.display_image_url ||
+      nft.image_url ||
       "";
 
     const rarityClass = rarityInfo ? rarityInfo.className : "other";
@@ -134,90 +132,109 @@ function renderEvents(events) {
     `;
 
     ul.appendChild(li);
-  });
+  }
+}
+
+// ==== RARITY VIA METADATA ====
+
+async function getRarityForEvent(ev) {
+  const nft = ev?.nft;
+  if (!nft) return null;
+
+  const key =
+    nft.metadata_url ||
+    (nft.collection && nft.identifier
+      ? `${nft.collection}:${nft.identifier}`
+      : null);
+
+  if (!key) return null;
+
+  if (rarityCache.has(key)) {
+    return rarityCache.get(key);
+  }
+
+  if (!nft.metadata_url) {
+    rarityCache.set(key, null);
+    return null;
+  }
+
+  try {
+    const res = await fetch(nft.metadata_url, {
+      headers: { Accept: "application/json" }
+    });
+
+    if (!res.ok) throw new Error(`metadata HTTP ${res.status}`);
+
+    const meta = await res.json();
+    const attrs = []
+      .concat(meta.attributes || [])
+      .concat(meta.traits || []);
+
+    if (!attrs.length) {
+      rarityCache.set(key, null);
+      return null;
+    }
+
+    const rarityAttr = attrs.find((attr) => {
+      const traitKey = (
+        attr.trait_type ||
+        attr.type ||
+        attr.name ||
+        ""
+      )
+        .toString()
+        .toLowerCase();
+
+      return (
+        traitKey.includes("rarity") ||
+        traitKey.includes("tier") ||
+        traitKey.includes("grade") ||
+        traitKey.includes("quality")
+      );
+    });
+
+    if (!rarityAttr) {
+      rarityCache.set(key, null);
+      return null;
+    }
+
+    const raw = String(
+      rarityAttr.value ?? rarityAttr.trait_type ?? rarityAttr.name ?? ""
+    ).trim();
+    if (!raw) {
+      rarityCache.set(key, null);
+      return null;
+    }
+
+    const lower = raw.toLowerCase();
+    let className = "other";
+
+    if (lower.includes("common") && !lower.includes("uncommon")) className = "common";
+    else if (lower.includes("uncommon")) className = "uncommon";
+    else if (lower.includes("epic")) className = "epic";
+    else if (lower.includes("rare")) className = "rare";
+
+    const result = { label: raw, className };
+    rarityCache.set(key, result);
+    return result;
+  } catch (err) {
+    console.error("Error fetching metadata for rarity", err);
+    rarityCache.set(key, null);
+    return null;
+  }
 }
 
 // ==== HELPERS ====
 
-// Rarity: read from metadata attributes/traits, normalize to 4 tiers
-function extractRarity(ev) {
-  const sources = [
-    ev?.nft?.metadata?.attributes,
-    ev?.nft?.metadata?.traits,
-    ev?.nft?.traits,
-    ev?.asset?.traits
-  ].filter(Array.isArray);
-
-  const attrs = sources.flat();
-  if (!attrs.length) return null;
-
-  const rarityAttr = attrs.find((attr) => {
-    const key = (
-      attr.trait_type ||
-      attr.type ||
-      attr.name ||
-      ""
-    )
-      .toString()
-      .toLowerCase();
-    return (
-      key.includes("rarity") ||
-      key.includes("tier") ||
-      key.includes("grade") ||
-      key.includes("quality")
-    );
-  });
-
-  if (!rarityAttr) return null;
-
-  const raw = String(
-    rarityAttr.value ?? rarityAttr.trait_type ?? rarityAttr.name ?? ""
-  ).trim();
-  if (!raw) return null;
-
-  const lower = raw.toLowerCase();
-  let className = "other";
-
-  if (lower.includes("common") && !lower.includes("uncommon")) className = "common";
-  else if (lower.includes("uncommon")) className = "uncommon";
-  else if (lower.includes("epic")) className = "epic";
-  else if (lower.includes("rare")) className = "rare";
-
-  return {
-    label: raw,
-    className
-  };
-}
-
-function formatAccount(entity) {
-  if (!entity) return "";
-
-  const username =
-    entity.user?.username ||
-    entity.display_name ||
-    entity.profile_name ||
-    "";
-
-  if (username && username.trim().length > 0) {
-    return username.trim();
-  }
-
-  const addr = entity.address || entity.wallet_address;
+function formatAddress(addr) {
   if (!addr || typeof addr !== "string") return "";
-
-  const trimmed = addr.replace(/^0x/, "");
-  const last4 = trimmed.slice(-4);
+  const clean = addr.toLowerCase();
+  const last4 = clean.slice(-4);
   return `…${last4}`;
 }
 
-function formatTime(timestamp) {
-  let d;
-  if (typeof timestamp === "number") {
-    d = new Date(timestamp * 1000);
-  } else {
-    d = new Date(timestamp);
-  }
-
+function formatUnixSeconds(sec) {
+  const d = new Date(sec * 1000);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleTimeString(undefined, {
     hour: "2-digit",
