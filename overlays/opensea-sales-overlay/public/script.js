@@ -1,7 +1,8 @@
 // ==== CONFIG ====
-const COLLECTION_SLUG = "off-the-grid"; // OpenSea collection slug
-const POLL_INTERVAL_MS = 15000; // 15 seconds
-const MAX_ITEMS = 10;
+const COLLECTION_SLUG = "off-the-grid";       // OpenSea collection slug
+const POLL_INTERVAL_MS = 15000;               // 15 seconds
+const MAX_ITEMS = 5;
+const API_PATH = "/api/opensea-sales.js";     // IMPORTANT: .js route
 
 // ==== CORE LOGIC ====
 
@@ -9,15 +10,13 @@ async function fetchEvents() {
   const errorEl = document.getElementById("error");
   errorEl.textContent = "";
 
-  const url = `/api/opensea-sales?collection=${encodeURIComponent(
+  const url = `${API_PATH}?collection=${encodeURIComponent(
     COLLECTION_SLUG
   )}&limit=${MAX_ITEMS}`;
 
   try {
     const res = await fetch(url, {
-      headers: {
-        Accept: "application/json"
-      }
+      headers: { Accept: "application/json" }
     });
 
     if (!res.ok) {
@@ -25,10 +24,11 @@ async function fetchEvents() {
     }
 
     const data = await res.json();
+
+    // OpenSea v2 returns an `asset_events` array for collection events
     const events = data.asset_events || data.events || [];
 
     console.log("Proxy events:", events);
-
     renderEvents(events);
   } catch (err) {
     console.error("Error fetching via proxy:", err);
@@ -51,24 +51,45 @@ function renderEvents(events) {
   events.slice(0, MAX_ITEMS).forEach((ev) => {
     const li = document.createElement("li");
 
+    // Try to pull a readable name
     const name =
-      ev?.asset?.name ||
       ev?.nft?.metadata?.name ||
-      ev?.payload?.item?.metadata?.name ||
+      ev?.nft?.name ||
+      ev?.asset?.name ||
       "Unknown item";
 
+    // Payment / price
+    const quantityRaw = ev?.payment?.quantity;
+    const decimals = Number(ev?.payment?.token?.decimals ?? 18);
+    const symbol = ev?.payment?.token?.symbol || "";
+    let priceStr = "";
+
+    if (quantityRaw) {
+      // quantityRaw is usually a string of the smallest unit
+      const qty = Number(quantityRaw) / Math.pow(10, decimals);
+      if (!Number.isNaN(qty)) {
+        priceStr = `${qty.toFixed(4)} ${symbol}`.trim();
+      }
+    }
+
+    // Timestamp
     const ts =
       ev.event_timestamp ||
       ev?.transaction?.timestamp ||
-      ev?.payload?.event_timestamp;
+      ev?.transaction?.created_date ||
+      ev?.created_date;
 
     const timeStr = ts ? formatTime(ts) : "";
 
-    const type = ev.event_type || ev?.payload?.event_type || "sale";
+    const type = ev.event_type || "sale";
 
     li.innerHTML = `
       <span class="item-name">${sanitize(name)}</span>
-      <span class="meta">${sanitize(type)} • ${sanitize(timeStr)}</span>
+      <span class="meta">
+        ${sanitize(type)}${priceStr ? " • " + sanitize(priceStr) : ""}${
+      timeStr ? " • " + sanitize(timeStr) : ""
+    }
+      </span>
     `;
 
     ul.appendChild(li);
