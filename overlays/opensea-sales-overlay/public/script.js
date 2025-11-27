@@ -32,6 +32,8 @@ async function fetchEvents() {
   }
 }
 
+window.__lastEvents = events;
+
 function renderEvents(events) {
   const ul = document.getElementById("events");
   ul.innerHTML = "";
