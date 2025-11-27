@@ -1,6 +1,6 @@
 // ==== CONFIG ====
-const COLLECTION_SLUG = "off-the-grid"; // OpenSea collection slug
-const POLL_INTERVAL_MS = 15000;         // 15 seconds
+const COLLECTION_SLUG = "off-the-grid";   // OpenSea collection slug
+const POLL_INTERVAL_MS = 15000;           // 15 seconds
 const MAX_ITEMS = 10;
 const API_PATH = "/api/opensea-sales.js"; // Vercel function route
 
@@ -37,18 +37,39 @@ async function fetchEvents() {
 
 async function renderEvents(events) {
   const ul = document.getElementById("events");
+  const highEl = document.getElementById("high-sale");
   ul.innerHTML = "";
 
-  if (!events || events.length === 0) {
+  const slice = events.slice(0, MAX_ITEMS);
+
+  // ----- Session high (within this batch) -----
+  const maxEvent = getMaxEventByPrice(slice);
+  if (maxEvent) {
+    const nft = maxEvent.nft || {};
+    const name = nft.name || `#${nft.identifier || "?"}`;
+    const priceInfo = getPaymentInfo(maxEvent);
+    const priceStr = priceInfo.str || "";
+    highEl.style.display = "";
+    highEl.innerHTML = `
+      <div class="label">SESSION HIGH</div>
+      <div class="value">
+        ${priceStr ? sanitize(priceStr) + " • " : ""}${sanitize(name)}
+      </div>
+    `;
+  } else {
+    highEl.textContent = "";
+    highEl.style.display = "none";
+  }
+
+  if (!slice.length) {
     const li = document.createElement("li");
     li.innerHTML =
-      '<span class="item-name">No recent sales</span><span class="meta">Waiting for activity…</span>';
+      '<span class="item-name">No recent sales</span><span class="datetime-line">Waiting for activity…</span>';
     ul.appendChild(li);
     return;
   }
 
-  const slice = events.slice(0, MAX_ITEMS);
-
+  // ----- Individual items -----
   for (const ev of slice) {
     const li = document.createElement("li");
 
@@ -58,29 +79,18 @@ async function renderEvents(events) {
       nft.name ||
       `#${nft.identifier || "?"}`;
 
-    // Rarity from metadata_url (cached)
+    // Rarity (metadata_url, cached)
     const rarityInfo = await getRarityForEvent(ev);
+    const rarityClass = rarityInfo ? rarityInfo.className : "other";
 
-    // Price (2 decimals) – note OTG shape: payment.quantity, payment.decimals, payment.symbol
-    const payment = ev?.payment || {};
-    const quantityRaw = payment.quantity;
-    const decimals = Number(payment.decimals ?? 18);
-    const symbol = payment.symbol || "";
+    // Price (2 decimals)
+    const paymentInfo = getPaymentInfo(ev);
+    const priceStr = paymentInfo.str;
 
-    let priceStr = "";
-    if (quantityRaw) {
-      const qtyNum = Number(quantityRaw) / Math.pow(10, decimals);
-      if (!Number.isNaN(qtyNum)) {
-        priceStr = `${qtyNum.toFixed(2)} ${symbol}`.trim();
-      }
-    }
-
-    // Timestamp
+    // Timestamp -> date + time
     const ts = ev.event_timestamp || ev.closing_date;
     const dateStr = ts ? formatDateUnixSeconds(ts) : "";
     const timeStr = ts ? formatUnixSeconds(ts) : "";
-
-    const type = ev.event_type || "sale";
 
     // Direction: seller -> buyer (addresses only)
     const sellerStr = formatAddress(ev.seller);
@@ -94,7 +104,7 @@ async function renderEvents(events) {
       nft.image_url ||
       "";
 
-    const rarityClass = rarityInfo ? rarityInfo.className : "other";
+    const type = ev.event_type || "sale";
 
     li.className = `rarity-${sanitize(rarityClass)}`;
 
@@ -118,16 +128,23 @@ async function renderEvents(events) {
                 : ""
             }
           </div>
-                    <span class="meta">
+          <span class="meta-line">
             ${sanitize(type)}${
       priceStr ? " • " + sanitize(priceStr) : ""
-    }${dateStr ? " • " + sanitize(dateStr) : ""}${
-      timeStr ? " • " + sanitize(timeStr) : ""
+    }
+          </span>
+          <span class="datetime-line">
+            ${
+              dateStr
+                ? sanitize(dateStr)
+                : ""
+            }${
+      timeStr ? (dateStr ? " • " : "") + sanitize(timeStr) : ""
     }
           </span>
           ${
             directionStr
-              ? `<span class="direction">${sanitize(directionStr)}</span>`
+              ? `<span class="direction-line">${sanitize(directionStr)}</span>`
               : ""
           }
         </div>
@@ -136,6 +153,40 @@ async function renderEvents(events) {
 
     ul.appendChild(li);
   }
+}
+
+// ==== PAYMENT / SESSION HIGH HELPERS ====
+
+function getPaymentInfo(ev) {
+  const payment = ev?.payment || {};
+  const quantityRaw = payment.quantity;
+  const decimals = Number(payment.decimals ?? 18);
+  const symbol = payment.symbol || "";
+
+  if (!quantityRaw) return { amount: null, str: "" };
+
+  const qtyNum = Number(quantityRaw) / Math.pow(10, decimals);
+  if (Number.isNaN(qtyNum)) return { amount: null, str: "" };
+
+  return {
+    amount: qtyNum,
+    str: `${qtyNum.toFixed(2)} ${symbol}`.trim()
+  };
+}
+
+function getMaxEventByPrice(events) {
+  let best = null;
+  let bestAmount = -Infinity;
+
+  for (const ev of events) {
+    const info = getPaymentInfo(ev);
+    if (info.amount != null && info.amount > bestAmount) {
+      bestAmount = info.amount;
+      best = ev;
+    }
+  }
+
+  return best;
 }
 
 // ==== RARITY VIA METADATA ====
@@ -227,7 +278,7 @@ async function getRarityForEvent(ev) {
   }
 }
 
-// ==== HELPERS ====
+// ==== MISC HELPERS ====
 
 function formatAddress(addr) {
   if (!addr || typeof addr !== "string") return "";

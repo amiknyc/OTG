@@ -26,13 +26,34 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .title {
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.04em;
+}
+
+/* High sale block */
+#high-sale {
+  font-size: 11px;
+  color: #e5e7eb;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+#high-sale .label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+#high-sale .value {
+  font-weight: 500;
+  font-size: 12px;
 }
 
 /* Events list */
@@ -93,19 +114,26 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #f9fafb; /* default, overridden by rarity classes */
 }
 
-/* Bottom lines */
-.meta {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 3px;
-}
-
-.direction {
+/* Three lines below: price, date+time, direction */
+.meta-line {
   font-size: 11px;
   color: #e5e7eb;
   margin-top: 2px;
+}
+
+.datetime-line {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+.direction-line {
+  font-size: 11px;
+  color: #e5e7eb;
+  margin-top: 1px;
 }
 
 /* Rarity pill */
@@ -119,6 +147,8 @@ body {
 }
 
 /* Rarity colors: pill + item text */
+
+/* Common: text white */
 .rarity-common .rarity-pill {
   background: rgba(148, 163, 184, 0.35);
   color: #e5e7eb;
@@ -127,16 +157,16 @@ body {
   color: #f9fafb; /* white */
 }
 
+/* Uncommon: green */
 .rarity-uncommon .rarity-pill {
-  /* soft green glow */
   background: rgba(22, 163, 74, 0.28);
   color: #15fa61;
 }
-
 .rarity-uncommon .item-name {
   color: #15fa61; /* green */
 }
 
+/* Rare: blue */
 .rarity-rare .rarity-pill {
   background: rgba(37, 99, 235, 0.28);
   color: #60a5fa;
@@ -145,6 +175,7 @@ body {
   color: #60a5fa; /* blue */
 }
 
+/* Epic: purple */
 .rarity-epic .rarity-pill {
   background: rgba(147, 51, 234, 0.35);
   color: #a855f7;
@@ -153,6 +184,7 @@ body {
   color: #a855f7; /* purple */
 }
 
+/* Fallback */
 .rarity-other .rarity-pill {
   background: rgba(55, 65, 81, 0.55);
   color: #e5e7eb;
