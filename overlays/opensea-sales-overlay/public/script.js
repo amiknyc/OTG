@@ -4,10 +4,10 @@
 const COLLECTION_SLUG = "off-the-grid";
 
 // Polling / display
-const POLL_INTERVAL_MS = 60000; // 60 seconds
+const POLL_INTERVAL_MS = 60000; // 60 seconds for marketplace
 const MAX_ITEMS = 10;
 
-// Backend routes
+// Backend routes (proxied by your Vercel / API layer)
 const API_PATH = "/api/opensea-sales.js";
 const GUN_METRICS_URL = "/api/coingecko-gun-metrics.js";
 
@@ -16,11 +16,12 @@ const DAY_SECONDS = 24 * 60 * 60;
 
 // Hard-coded all-time high for this collection.
 const ALL_TIME_HIGH = {
-  amount: 250000.00,
+  amount: 250000.0,
   symbol: "GUN",
   name: "APE-FOOL'S GOLD MASK",
   timestamp: 1764263173,
-  thumbUrl: "https://i2c.seadn.io/gunzilla/0x9ed98e159be43a8d42b64053831fcae5e4d7d271/632fcd41d3343ffee3bc0d14057449/77632fcd41d3343ffee3bc0d14057449.png?w=1000"
+  thumbUrl:
+    "https://i2c.seadn.io/gunzilla/0x9ed98e159be43a8d42b64053831fcae5e4d7d271/632fcd41d3343ffee3bc0d14057449/77632fcd41d3343ffee3bc0d14057449.png?w=1000"
 };
 
 // Cache rarity per NFT to avoid refetching metadata
@@ -33,47 +34,59 @@ let gunMetrics = {
   vol1dUsd: null,
   marketCap1dUsd: null,
   marketCap7dUsd: null,
-  change4hPct: null,   // we use this as 24H change
+  change4hPct: null, // we use this as 24H change
   sparkline7d: null
 };
 
-// Local 5-minute sparkline (per session)
-// 12 points = last ~1 hour at 5-minute refresh
+// Local 5-minute sparkline history (per session). 12 points = last ~1 hour.
 const SPARKLINE_MAX_POINTS = 12;
 let sparkline5m = [];
 
-// Cache last rendered price string so we can detect changes
+// Cache last rendered price string so we can animate price flips only on change.
 let lastPriceStr = null;
 
 // ==== CORE BOOTSTRAP ====
 
 async function initOverlay() {
+  // GUN price + sparkline
   fetchGunMetrics();
-  setInterval(fetchGunMetrics, 300000); // 5 min
+  // 5-minute refresh for price + 5-min sparkline
+  setInterval(fetchGunMetrics, 300000);
 
+  // Marketplace events
   fetchEvents();
   setInterval(fetchEvents, POLL_INTERVAL_MS);
 }
 
-// ==== EVENTS (SALES) ====
+// ==== MARKETPLACE (OPENSEA) ====
 
 async function fetchEvents() {
   const errorEl = document.getElementById("error");
   if (errorEl) errorEl.textContent = "";
 
-  const url = `${API_PATH}?collection=${encodeURIComponent(
-    COLLECTION_SLUG
-  )}&limit=${MAX_ITEMS}`;
-
   try {
-    const res = await fetch(url, {
+    const params = new URLSearchParams({
+      collection: COLLECTION_SLUG,
+      limit: String(MAX_ITEMS)
+    });
+
+    const res = await fetch(`${API_PATH}?${params.toString()}`, {
       headers: { Accept: "application/json" }
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      console.error("Proxy error HTTP", res.status);
+      if (errorEl) errorEl.textContent = "Error loading sales feed";
+      return;
+    }
 
     const data = await res.json();
-    const events = data.asset_events || data.events || [];
+
+    const events = Array.isArray(data.asset_events)
+      ? data.asset_events
+      : Array.isArray(data.events)
+      ? data.events
+      : [];
 
     console.log("Proxy events:", events);
     await renderEvents(events);
@@ -90,14 +103,15 @@ async function renderEvents(events) {
 
   ul.innerHTML = "";
 
-  const slice = events.slice(0, MAX_ITEMS);
+  const slice = (events || []).slice(0, MAX_ITEMS);
 
   // 24H session high
   const nowSec = Math.floor(Date.now() / 1000);
   const cutoff24h = nowSec - DAY_SECONDS;
 
-  const events24h = events.filter((ev) => {
-    const ts = ev.event_timestamp || ev.closing_date;
+  const events24h = (events || []).filter((ev) => {
+    const tsRaw = ev.event_timestamp || ev.closing_date;
+    const ts = toUnixSeconds(tsRaw);
     return typeof ts === "number" && ts >= cutoff24h;
   });
 
@@ -115,19 +129,20 @@ async function renderEvents(events) {
     highEl.style.display = "none";
   }
 
-  // List
+  // Empty state
   if (!slice.length) {
     const li = document.createElement("li");
     li.innerHTML =
-      '<span class="item-name">No recent sales</span><span class="datetime-line">Waiting for activity…</span>';
+      '<div class="empty-state">No recent sales. Waiting for activity…</div>';
     ul.appendChild(li);
     return;
   }
 
+  // Events list
   for (const ev of slice) {
     const li = document.createElement("li");
 
-    const nft = ev?.nft || {};
+    const nft = ev?.nft || ev?.asset || {};
     const name = nft.name || `#${nft.identifier || "?"}`;
 
     const rarityInfo = await getRarityForEvent(ev);
@@ -136,7 +151,8 @@ async function renderEvents(events) {
     const paymentInfo = getPaymentInfo(ev);
     const priceStr = paymentInfo.str;
 
-    const ts = ev.event_timestamp || ev.closing_date;
+    const tsRaw = ev.event_timestamp || ev.closing_date;
+    const ts = toUnixSeconds(tsRaw);
     const dateStr = ts ? formatDateUnixSeconds(ts) : "";
     const timeStr = ts ? formatUnixSeconds(ts) : "";
 
@@ -145,54 +161,51 @@ async function renderEvents(events) {
     const directionStr =
       sellerStr && buyerStr ? `${sellerStr} → ${buyerStr}` : "";
 
-    const thumbUrl =
-      nft.display_image_url ||
-      nft.image_url ||
-      "";
+    const thumbUrl = nft.display_image_url || nft.image_url || "";
 
     const type = ev.event_type || "sale";
 
     li.className = `rarity-${sanitize(rarityClass)}`;
 
     li.innerHTML = `
-      <div class="item-row">
+      <div class="event-card">
         <div class="thumb-wrapper">
           ${
             thumbUrl
-              ? `<img class="thumb" src="${sanitize(thumbUrl)}" alt="" />`
-              : ""
+              ? `<img class="thumb" src="${sanitize(
+                  thumbUrl
+                )}" alt="${sanitize(name)}" />`
+              : `<div class="thumb thumb-placeholder"></div>`
           }
         </div>
-        <div class="item-content">
-          <div class="item-header">
-            <span class="item-name">${sanitize(name)}</span>
+        <div class="event-main">
+          <div class="top-line">
+            <span class="name">${sanitize(name)}</span>
+            <span class="price">${sanitize(priceStr)}</span>
+          </div>
+          <div class="meta-lines">
+            <span class="type-line">
+              ${sanitize(type)}${
+      priceStr ? " • " + sanitize(priceStr) : ""
+    }
+            </span>
+            <span class="datetime-line">
+              ${
+                dateStr
+                  ? sanitize(dateStr)
+                  : ""
+              }${
+      timeStr ? (dateStr ? " • " : "") + sanitize(timeStr) : ""
+    }
+            </span>
             ${
-              rarityInfo
-                ? `<span class="rarity-pill rarity-${sanitize(
-                    rarityClass
-                  )}">${sanitize(rarityInfo.label)}</span>`
+              directionStr
+                ? `<span class="direction-line">${sanitize(
+                    directionStr
+                  )}</span>`
                 : ""
             }
           </div>
-          <span class="meta-line">
-            ${sanitize(type)}${
-      priceStr ? " • " + sanitize(priceStr) : ""
-    }
-          </span>
-          <span class="datetime-line">
-            ${
-              dateStr
-                ? sanitize(dateStr)
-                : ""
-            }${
-      timeStr ? (dateStr ? " • " : "") + sanitize(timeStr) : ""
-    }
-          </span>
-          ${
-            directionStr
-              ? `<span class="direction-line">${sanitize(directionStr)}</span>`
-              : ""
-          }
         </div>
       </div>
     `;
@@ -216,14 +229,12 @@ function renderSessionHighCard(ev) {
     `;
   }
 
-  const nft = ev.nft || {};
+  const nft = ev.nft || ev.asset || {};
   const name = nft.name || `#${nft.identifier || "?"}`;
   const priceInfo = getPaymentInfo(ev);
-  const priceStr = priceInfo.str || "";
-  const thumbUrl =
-    nft.display_image_url ||
-    nft.image_url ||
-    "";
+  const priceStr = priceInfo.str;
+
+  const thumbUrl = nft.display_image_url || nft.image_url || "";
 
   return `
     <div class="high-card">
@@ -293,7 +304,6 @@ async function fetchGunMetrics() {
     }
 
     const data = await res.json();
-        const data = await res.json();
     console.log("gun-metrics data", data);
 
     gunMetrics = {
@@ -307,7 +317,7 @@ async function fetchGunMetrics() {
     };
 
     // Update local 5-minute sparkline history
-    const priceForSpark = data.priceUsd ?? null;
+    const priceForSpark = gunMetrics.priceUsd;
     if (priceForSpark != null && !Number.isNaN(Number(priceForSpark))) {
       sparkline5m.push(Number(priceForSpark));
       if (sparkline5m.length > SPARKLINE_MAX_POINTS) {
@@ -317,7 +327,6 @@ async function fetchGunMetrics() {
     }
 
     renderGunMetrics();
-
   } catch (err) {
     console.error("Error fetching gun-metrics", err);
     gunMetrics = nullMetrics();
@@ -342,40 +351,30 @@ function renderGunMetrics() {
   const sparkEl = document.getElementById("gun-sparkline");
   if (!el) return;
 
-  const {
-    priceUsd,
-    marketCapUsd,
-    vol1dUsd,
-    change4hPct,
-    sparkline7d
-  } = gunMetrics;
+  const { priceUsd, marketCapUsd, vol1dUsd, change4hPct, sparkline7d } =
+    gunMetrics;
 
-    const priceStr =
+  const priceStr =
     priceUsd != null
       ? priceUsd < 1
         ? `$${priceUsd.toFixed(4)}`
         : `$${priceUsd.toFixed(3)}`
       : "—";
 
-  // Decide whether to trigger flip animation (skip first render)
-  const shouldFlip = lastPriceStr !== null && priceStr !== lastPriceStr;
-  lastPriceStr = priceStr;
-
   const capStr = formatUsdShort(marketCapUsd);
   const volStr = formatUsdShort(vol1dUsd);
   const changeStr = formatPct(change4hPct);
 
-
   const changeClass =
     change4hPct == null
-      ? ""
+      ? "gun-change"
       : change4hPct > 0
       ? "gun-change positive"
       : change4hPct < 0
       ? "gun-change negative"
       : "gun-change";
 
-  // NEW: trend class for sparkline
+  // Trend class for sparkline
   const trendClass =
     change4hPct == null
       ? ""
@@ -385,11 +384,17 @@ function renderGunMetrics() {
       ? "negative"
       : "";
 
+  // Flip-clock style animation: only when price actually changes
+  const shouldFlip = lastPriceStr !== null && priceStr !== lastPriceStr;
+  lastPriceStr = priceStr;
+
+  const priceSpanClass = `gun-price${shouldFlip ? " flip-animate" : ""}`;
+
   el.innerHTML = `
     <div class="gun-metrics">
       <div class="gun-metric-main">
         <span class="gun-label">GUN</span>
-        <span class="gun-price${shouldFlip ? " flip-animate" : ""}">
+        <span class="${priceSpanClass}">
           ${sanitize(priceStr)}
         </span>
         <span class="${changeClass}">${sanitize(changeStr)} (24H)</span>
@@ -407,12 +412,14 @@ function renderGunMetrics() {
     </div>
   `;
 
-    if (sparkEl) {
+  if (sparkEl) {
     // Prefer session-local 5-minute history; fall back to 7D until we have enough points
-    const series =
-      sparkline5m.length >= 2
-        ? sparkline5m
-        : (sparkline7d && sparkline7d.length >= 2 ? sparkline7d : []);
+    let series = [];
+    if (sparkline5m.length >= 2) {
+      series = sparkline5m;
+    } else if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
+      series = sparkline7d;
+    }
 
     if (series.length >= 2) {
       sparkEl.innerHTML = renderSparkline(series, trendClass);
@@ -427,7 +434,9 @@ function renderSparkline(values, trendClass) {
   const height = 32;
   const margin = 2;
 
-  const filtered = values.filter((v) => typeof v === "number" && !Number.isNaN(v));
+  const filtered = values.filter(
+    (v) => typeof v === "number" && !Number.isNaN(v)
+  );
   if (filtered.length < 2) return "";
 
   const min = Math.min(...filtered);
@@ -445,7 +454,7 @@ function renderSparkline(values, trendClass) {
     d += (i === 0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
   });
 
-    const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
+  const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
 
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
@@ -476,10 +485,10 @@ function getPaymentInfo(ev) {
 function getMaxEventByPrice(events) {
   let best = null;
   let bestAmount = -Infinity;
-  for (const ev of events) {
-    const info = getPaymentInfo(ev);
-    if (info.amount != null && info.amount > bestAmount) {
-      bestAmount = info.amount;
+  for (const ev of events || []) {
+    const { amount } = getPaymentInfo(ev);
+    if (amount != null && amount > bestAmount) {
+      bestAmount = amount;
       best = ev;
     }
   }
@@ -487,7 +496,7 @@ function getMaxEventByPrice(events) {
 }
 
 async function getRarityForEvent(ev) {
-  const nft = ev?.nft;
+  const nft = ev?.nft || ev?.asset;
   if (!nft) return null;
 
   const key =
@@ -510,10 +519,13 @@ async function getRarityForEvent(ev) {
 
     if (!res.ok) throw new Error(`metadata HTTP ${res.status}`);
 
-    const meta = await res.json();
-    const attrs = []
-      .concat(meta.attributes || [])
-      .concat(meta.traits || []);
+    const json = await res.json();
+    const attrsSource =
+      json.attributes ||
+      json.traits ||
+      (json.properties && json.properties.attributes) ||
+      [];
+    const attrs = Array.isArray(attrsSource) ? attrsSource : [];
 
     if (!attrs.length) {
       rarityCache.set(key, null);
@@ -554,7 +566,8 @@ async function getRarityForEvent(ev) {
     const lower = raw.toLowerCase();
     let className = "other";
 
-    if (lower.includes("common") && !lower.includes("uncommon")) className = "common";
+    if (lower.includes("common") && !lower.includes("uncommon"))
+      className = "common";
     else if (lower.includes("uncommon")) className = "uncommon";
     else if (lower.includes("epic")) className = "epic";
     else if (lower.includes("rare")) className = "rare";
@@ -574,6 +587,14 @@ function formatAddress(addr) {
   const clean = addr.toLowerCase();
   const last4 = clean.slice(-4);
   return `…${last4}`;
+}
+
+function toUnixSeconds(value) {
+  if (value == null) return null;
+  if (typeof value === "number") return value;
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) return null;
+  return Math.floor(ms / 1000);
 }
 
 function formatUnixSeconds(sec) {

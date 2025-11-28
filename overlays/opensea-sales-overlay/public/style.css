@@ -102,19 +102,10 @@ body {
   margin-bottom: 0;
 }
 
-.gun-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  color: #e5e7eb;
-}
-
 .gun-metric-main {
   display: flex;
   align-items: baseline;
   gap: 6px;
-
   /* Needed for 3D flip effect */
   perspective: 600px;
 }
@@ -129,7 +120,6 @@ body {
 .gun-price {
   font-weight: 600;
   font-size: 12px;
-
   /* Make it behave like a flip card */
   display: inline-block;
   transform-origin: center bottom;
@@ -155,16 +145,17 @@ body {
     opacity: 1;
   }
 }
+
 .gun-change {
   font-size: 11px;
 }
 
 .gun-change.positive {
-  color: #4dd9b3;
+  color: #4ade80;
 }
 
 .gun-change.negative {
-  color: #eb15ae;
+  color: #f97373;
 }
 
 /* Two-column metrics grid: Mkt Cap / Vol 24H ----------------------------- */
@@ -197,7 +188,7 @@ body {
   display: block;
 }
 
-/* Base sparkline path */
+/* Base sparkline path with draw animation */
 .sparkline-path {
   fill: none;
   stroke-width: 1.5;
@@ -219,7 +210,7 @@ body {
   stroke: #eb15ae; /* fuchsia */
 }
 
-/* Keyframes for the draw animation */
+/* Keyframes for sparkline draw animation */
 @keyframes spark-draw {
   to {
     stroke-dashoffset: 0;
