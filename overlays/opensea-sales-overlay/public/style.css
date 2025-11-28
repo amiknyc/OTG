@@ -62,11 +62,39 @@ body {
 
 /* GUN token section ------------------------------------------------------ */
 
+/* GUN token section with faded background image */
 #gun-token-section {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 6px 8px;          /* a bit of inner spacing */
+  border-radius: 10px;       /* optional, matches the card style */
+  overflow: hidden;          /* hide image overflow on corners */
 }
+
+/* Background image layer */
+#gun-token-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("assets/gunz.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  opacity: 0.18;             /* how faded it is: 0.1–0.25 is usually good */
+  filter: saturate(0.7);     /* slightly desaturated so it doesn’t scream */
+  pointer-events: none;      /* click-through */
+  z-index: 0;
+}
+
+/* Make all content sit above the background image */
+#gun-token-section > * {
+  position: relative;
+  z-index: 1;
+}
+
 
 /* Metrics block */
 
