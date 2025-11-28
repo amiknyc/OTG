@@ -10,7 +10,7 @@ const MAX_ITEMS = 10;
 // Backend proxy route for sales
 const API_PATH = "/api/opensea-sales.js";
 
-// Backend route for GUN metrics (this is the new function)
+// Backend route for GUN metrics
 const GUN_METRICS_URL = "/api/coingecko-gun-metrics.js";
 
 // Hard-coded all-time high for this collection.
