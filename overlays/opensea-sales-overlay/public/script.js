@@ -16,11 +16,18 @@ const DAY_SECONDS = 24 * 60 * 60;
 
 // Hard-coded all-time high for this collection.
 const ALL_TIME_HIGH = {
+  amount: 250000.00,
+  symbol: "GUN",
+  name: "APE-FOOL'S GOLD MASK",
+  timestamp: 1764263173,
+  const ALL_TIME_HIGH = {
   amount: 14444.0,
   symbol: "GUN",
   name: "Hitori Yubi Mask",
   timestamp: 1764263173,
-  thumbUrl: ""
+  thumbUrl: "https://i2c.seadn.io/gunzilla/0x9ed98e159be43a8d42b64053831fcae5e4d7d271/632fcd41d3343ffee3bc0d14057449/77632fcd41d3343ffee3bc0d14057449.png?w=1000"
+};
+
 };
 
 // Cache rarity per NFT to avoid refetching metadata
