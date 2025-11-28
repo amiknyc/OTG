@@ -1,8 +1,27 @@
 // ==== CONFIG ====
-const COLLECTION_SLUG = "off-the-grid";   // OpenSea collection slug
-const POLL_INTERVAL_MS = 15000;           // 15 seconds
+
+// OpenSea collection slug
+const COLLECTION_SLUG = "off-the-grid";
+
+// Polling / display
+const POLL_INTERVAL_MS = 15000; // 15 seconds
 const MAX_ITEMS = 10;
-const API_PATH = "/api/opensea-sales.js"; // Vercel function route
+
+// Backend proxy route
+const API_PATH = "/api/opensea-sales.js";
+
+// Time constants
+const DAY_SECONDS = 24 * 60 * 60;
+
+// Hard-coded all-time high for this collection.
+// EDIT THESE VALUES once you know the true ATH.
+const ALL_TIME_HIGH = {
+  amount: 14444.0, // numeric amount
+  symbol: "GUN",   // token symbol
+  name: "Hitori Yubi Mask", // item name
+  timestamp: 1764263173,    // optional: Unix seconds; or null
+  thumbUrl: ""              // optional: direct image URL for the ATH item
+};
 
 // Cache rarity per NFT to avoid refetching metadata
 const rarityCache = new Map(); // key: metadata_url or collection:id -> { label, className } | null
@@ -42,41 +61,30 @@ async function renderEvents(events) {
 
   const slice = events.slice(0, MAX_ITEMS);
 
-  // ----- Session high (within this batch) -----
-  const maxEvent = getMaxEventByPrice(slice);
-  if (maxEvent) {
-    const nft = maxEvent.nft || {};
-    const name = nft.name || `#${nft.identifier || "?"}`;
-    const priceInfo = getPaymentInfo(maxEvent);
-    const priceStr = priceInfo.str || "";
-    const thumbUrl =
-      nft.display_image_url ||
-      nft.image_url ||
-      "";
+  // ----- 24H SESSION HIGH -----
+  const nowSec = Math.floor(Date.now() / 1000);
+  const cutoff24h = nowSec - DAY_SECONDS;
 
-    highEl.style.display = "";
+  const events24h = events.filter((ev) => {
+    const ts = ev.event_timestamp || ev.closing_date;
+    return typeof ts === "number" && ts >= cutoff24h;
+  });
+
+  const sessionHighEvent = getMaxEventByPrice(events24h);
+
+  // ----- TOP ROW: SESSION HIGH 24H (from events) + ALL-TIME HIGH (from config) -----
+  if (sessionHighEvent || ALL_TIME_HIGH) {
+    highEl.style.display = "flex";
     highEl.innerHTML = `
-      <div class="high-sale-row">
-        <div class="high-thumb-wrapper">
-          ${
-            thumbUrl
-              ? `<img class="high-thumb" src="${sanitize(thumbUrl)}" alt="" />`
-              : ""
-          }
-        </div>
-        <div class="high-sale-text">
-          <div class="label">SESSION HIGH</div>
-          <div class="value">
-            ${priceStr ? sanitize(priceStr) + " • " : ""}${sanitize(name)}
-          </div>
-        </div>
-      </div>
+      ${renderSessionHighCard(sessionHighEvent)}
+      ${renderAllTimeHighCard(ALL_TIME_HIGH)}
     `;
   } else {
     highEl.textContent = "";
     highEl.style.display = "none";
   }
 
+  // ----- LIST RENDER -----
   if (!slice.length) {
     const li = document.createElement("li");
     li.innerHTML =
@@ -85,7 +93,6 @@ async function renderEvents(events) {
     return;
   }
 
-  // ----- Individual items -----
   for (const ev of slice) {
     const li = document.createElement("li");
 
@@ -171,7 +178,85 @@ async function renderEvents(events) {
   }
 }
 
-// ==== PAYMENT / SESSION HIGH HELPERS ====
+// ==== TOP ROW RENDERING ====
+
+function renderSessionHighCard(ev) {
+  if (!ev) {
+    return `
+      <div class="high-card">
+        <div class="high-thumb-wrapper"></div>
+        <div class="high-sale-text">
+          <div class="high-label">SESSION HIGH 24H</div>
+          <div class="high-value">—</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const nft = ev.nft || {};
+  const name = nft.name || `#${nft.identifier || "?"}`;
+  const priceInfo = getPaymentInfo(ev);
+  const priceStr = priceInfo.str || "";
+  const thumbUrl =
+    nft.display_image_url ||
+    nft.image_url ||
+    "";
+
+  return `
+    <div class="high-card">
+      <div class="high-thumb-wrapper">
+        ${
+          thumbUrl
+            ? `<img class="high-thumb" src="${sanitize(thumbUrl)}" alt="" />`
+            : ""
+        }
+      </div>
+      <div class="high-sale-text">
+        <div class="high-label">SESSION HIGH 24H</div>
+        <div class="high-value">
+          ${priceStr ? sanitize(priceStr) + " • " : ""}${sanitize(name)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAllTimeHighCard(config) {
+  if (!config || config.amount == null || !config.symbol || !config.name) {
+    return `
+      <div class="high-card">
+        <div class="high-thumb-wrapper"></div>
+        <div class="high-sale-text">
+          <div class="high-label">ALL-TIME HIGH</div>
+          <div class="high-value">—</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const priceStr = `${config.amount.toFixed(2)} ${config.symbol}`;
+  const thumbUrl = config.thumbUrl || "";
+
+  return `
+    <div class="high-card">
+      <div class="high-thumb-wrapper">
+        ${
+          thumbUrl
+            ? `<img class="high-thumb" src="${sanitize(thumbUrl)}" alt="" />`
+            : ""
+        }
+      </div>
+      <div class="high-sale-text">
+        <div class="high-label">ALL-TIME HIGH</div>
+        <div class="high-value">
+          ${sanitize(priceStr)} • ${sanitize(config.name)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==== PAYMENT / HIGH HELPERS ====
 
 function getPaymentInfo(ev) {
   const payment = ev?.payment || {};
