@@ -2,45 +2,70 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>OFF THE GRID | GUNZILLA</title>
+    <title>Off The Grid – GUN Overlay</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/public/style.css" />
   </head>
   <body>
     <div id="overlay">
-      <!-- GUN token section -->
+      <!-- GUN token section header -->
       <div class="header">
         <span class="title">GUN Token Price Action</span>
       </div>
 
+      <!-- GUN token section (background image handled in CSS) -->
       <div id="gun-token-section">
-        <div id="gun-price"></div>
-        <div id="gun-sparkline">
-  <svg viewBox="0 0 100 30" preserveAspectRatio="none">
-    <path
-      id="gun-sparkline-path"
-      class="sparkline-path"
-      d=""
-      fill="none"
-    />
-  </svg>
-</div>
+        <!-- Metrics block on top of background -->
+        <div class="gun-metrics">
+          <div class="gun-metric-main">
+            <span class="gun-label">GUN</span>
+            <span id="gun-price" class="gun-price">$0.000000</span>
+            <span id="gun-change" class="gun-change">+0.00% (24H)</span>
+          </div>
 
+          <div class="gun-metric-grid">
+            <div>
+              <div class="metric-label">Mkt Cap</div>
+              <div id="gun-mktcap" class="metric-value">$0.00M</div>
+            </div>
+            <div>
+              <div class="metric-label">Vol 24H</div>
+              <div id="gun-vol24h" class="metric-value">$0.00M</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sparkline area -->
+        <div id="gun-sparkline">
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none">
+            <path
+              id="gun-sparkline-path"
+              class="sparkline-path"
+              d=""
+              fill="none"
+            ></path>
+          </svg>
+        </div>
       </div>
 
+      <!-- Divider -->
       <div class="section-divider"></div>
 
-      <!-- Marketplace section -->
+      <!-- Marketplace section header -->
       <div class="subheader">
-        <span class="title">Off The Grid Marketplace Data</span>
+        <span class="title">GUN Marketplace Data</span>
       </div>
 
+      <!-- High sale cards (session high + all-time high) -->
       <div id="high-sale"></div>
+
+      <!-- Recent events list -->
       <ul id="events"></ul>
+
+      <!-- Error line -->
       <div id="error"></div>
     </div>
 
-    <!-- IMPORTANT: script.js must live in the same folder as index.html -->
     <script src="/public/script.js"></script>
   </body>
 </html>
