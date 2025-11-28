@@ -23,8 +23,6 @@ const ALL_TIME_HIGH = {
   thumbUrl: "https://i2c.seadn.io/gunzilla/0x9ed98e159be43a8d42b64053831fcae5e4d7d271/632fcd41d3343ffee3bc0d14057449/77632fcd41d3343ffee3bc0d14057449.png?w=1000"
 };
 
-};
-
 // Cache rarity per NFT to avoid refetching metadata
 const rarityCache = new Map();
 
