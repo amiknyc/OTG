@@ -19,16 +19,13 @@ module.exports = async (req, res) => {
     const id = process.env.COINGECKO_ID || "gunz"; // fallback
     const apiKey = process.env.COINGECKO_API_KEY || "";
 
-    // If you have a Pro key use pro-api, otherwise fall back to public API
-    let url;
-    let headers = { Accept: "application/json" };
+    // ALWAYS use the public host for demo / free keys
+    const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`;
 
+    const headers = { Accept: "application/json" };
     if (apiKey) {
-      url = `https://pro-api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`;
-      headers["x-cg-pro-api-key"] = apiKey;
-    } else {
-      url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`;
-      // no auth header for public endpoint
+      // Demo / free key header (Coingecko docs)
+      headers["x-cg-demo-api-key"] = apiKey;
     }
 
     const cgRes = await fetch(url, { headers });
