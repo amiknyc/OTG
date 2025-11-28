@@ -350,6 +350,16 @@ function renderGunMetrics() {
       ? "gun-change negative"
       : "gun-change";
 
+  // NEW: trend class for sparkline
+  const trendClass =
+    change4hPct == null
+      ? ""
+      : change4hPct > 0
+      ? "positive"
+      : change4hPct < 0
+      ? "negative"
+      : "";
+
   el.innerHTML = `
     <div class="gun-metrics">
       <div class="gun-metric-main">
@@ -372,14 +382,15 @@ function renderGunMetrics() {
 
   if (sparkEl) {
     if (sparkline7d && sparkline7d.length >= 2) {
-      sparkEl.innerHTML = renderSparkline(sparkline7d);
+      sparkEl.innerHTML = renderSparkline(sparkline7d, trendClass);
     } else {
       sparkEl.innerHTML = "";
     }
   }
 }
 
-function renderSparkline(values) {
+
+function renderSparkline(values, trendClass) {
   const width = 140;
   const height = 32;
   const margin = 2;
@@ -402,12 +413,15 @@ function renderSparkline(values) {
     d += (i === 0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
   });
 
+  const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
+
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <path class="sparkline-path" d="${d.trim()}" />
+      <path class="${cls}" d="${d.trim()}" />
     </svg>
   `;
 }
+
 
 // ==== PAYMENT / RARITY / FORMATTING HELPERS ====
 

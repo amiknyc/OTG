@@ -173,7 +173,17 @@ body {
 .sparkline-path {
   fill: none;
   stroke-width: 1.5;
-  stroke: #60a5fa; /* sparkline color */
+  stroke: #6b7280; /* neutral grey fallback */
+}
+
+/* Positive 24H trend = green */
+.sparkline-path.positive {
+  stroke: #4dd9b3; /* green */
+}
+
+/* Negative 24H trend = fuchsia */
+.sparkline-path.negative {
+  stroke: #eb15ae; /* fuchsia */
 }
 
 /* High sale cards -------------------------------------------------------- */
