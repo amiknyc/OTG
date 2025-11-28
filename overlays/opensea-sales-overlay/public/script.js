@@ -4,7 +4,7 @@
 const COLLECTION_SLUG = "off-the-grid";
 
 // Polling / display
-const POLL_INTERVAL_MS = 15000; // 15 seconds
+const POLL_INTERVAL_MS = 60000; // 60 seconds
 const MAX_ITEMS = 10;
 
 // Backend routes
@@ -413,15 +413,14 @@ function renderSparkline(values, trendClass) {
     d += (i === 0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
   });
 
-  const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
+    const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
 
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <path class="${cls}" d="${d.trim()}" />
+      <path class="${cls}" d="${d.trim()}" pathLength="100" />
     </svg>
   `;
 }
-
 
 // ==== PAYMENT / RARITY / FORMATTING HELPERS ====
 

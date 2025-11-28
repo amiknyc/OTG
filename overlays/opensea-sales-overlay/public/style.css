@@ -160,6 +160,8 @@ body {
 
 /* Sparkline -------------------------------------------------------------- */
 
+/* Sparkline -------------------------------------------------------------- */
+
 #gun-sparkline {
   height: 32px;
 }
@@ -170,10 +172,16 @@ body {
   display: block;
 }
 
+/* Base sparkline path */
 .sparkline-path {
   fill: none;
   stroke-width: 1.5;
   stroke: #6b7280; /* neutral grey fallback */
+
+  /* Animation: draw the line in from left to right */
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: spark-draw 1.2s ease-out forwards;
 }
 
 /* Positive 24H trend = green */
@@ -184,6 +192,13 @@ body {
 /* Negative 24H trend = fuchsia */
 .sparkline-path.negative {
   stroke: #eb15ae; /* fuchsia */
+}
+
+/* Keyframes for the draw animation */
+@keyframes spark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* High sale cards -------------------------------------------------------- */
