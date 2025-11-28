@@ -1,4 +1,4 @@
-/* ==== Base layout ==== */
+/* Global reset ------------------------------------------------------------ */
 
 *,
 *::before,
@@ -10,26 +10,27 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
 }
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", sans-serif;
-  background: transparent; /* for OBS */
+  background: transparent; /* so OBS shows through */
   color: #e5e7eb;
 }
 
+/* Overlay card ----------------------------------------------------------- */
+
 #overlay {
   width: 420px;
-  padding: 12px 14px 10px 14px;
-  border-radius: 16px;
-  background: rgba(31, 41, 55, 0.96);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7);
-  font-size: 12px;
+  max-width: 100vw;
+  background: #111827;
+  border-radius: 14px;
+  padding: 12px 16px 10px 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
 }
 
-/* ==== Headings & sections ==== */
+/* Headings --------------------------------------------------------------- */
 
 .header {
   margin-bottom: 6px;
@@ -52,18 +53,22 @@ body {
   color: #e5e7eb;
 }
 
+/* Divider between token + marketplace sections --------------------------- */
+
 .section-divider {
   margin: 8px 0 6px 0;
   border-top: 1px solid rgba(55, 65, 81, 0.85);
 }
 
-/* ==== GUN token section ==== */
+/* GUN token section ------------------------------------------------------ */
 
 #gun-token-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+
+/* Metrics block */
 
 #gun-price {
   margin-bottom: 0;
@@ -107,6 +112,8 @@ body {
   color: #f97373;
 }
 
+/* Two-column metrics grid: Mkt Cap / Vol 24H ----------------------------- */
+
 .gun-metric-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -123,7 +130,7 @@ body {
   font-weight: 500;
 }
 
-/* ==== Sparkline ==== */
+/* Sparkline -------------------------------------------------------------- */
 
 #gun-sparkline {
   height: 32px;
@@ -138,34 +145,35 @@ body {
 .sparkline-path {
   fill: none;
   stroke-width: 1.5;
-  stroke: #60a5fa; /* blue line */
+  stroke: #60a5fa; /* sparkline color */
 }
 
-/* ==== High sale section ==== */
+/* High sale cards -------------------------------------------------------- */
 
 #high-sale {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  flex-direction: row;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .high-card {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: row;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   padding: 6px 8px;
   border-radius: 10px;
-  background: rgba(17, 24, 39, 0.9);
-  align-items: center;
+  background: rgba(31, 41, 55, 0.95);
 }
 
 .high-thumb-wrapper {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   overflow: hidden;
-  background: #111827;
+  background: rgba(17, 24, 39, 0.9);
   flex-shrink: 0;
 }
 
@@ -179,23 +187,23 @@ body {
 .high-sale-text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .high-label {
-  font-size: 9px;
-  color: #9ca3af;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
 }
 
 .high-value {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: #f9fafb;
 }
 
-/* ==== Events list ==== */
+/* Events list ------------------------------------------------------------ */
 
 #events {
   list-style: none;
@@ -204,27 +212,28 @@ body {
 }
 
 #events li {
-  padding: 7px 0;
-  border-bottom: 1px solid rgba(55, 65, 81, 0.85);
+  padding: 8px 0;
+  border-top: 1px solid rgba(55, 65, 81, 0.75);
 }
 
-#events li:last-child {
-  border-bottom: none;
+#events li:first-child {
+  border-top: none;
 }
 
 .item-row {
   display: flex;
-  gap: 8px;
+  flex-direction: row;
   align-items: flex-start;
+  gap: 8px;
 }
 
 .thumb-wrapper {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   overflow: hidden;
+  background: rgba(15, 23, 42, 0.9);
   flex-shrink: 0;
-  background: #111827;
 }
 
 .thumb {
@@ -235,12 +244,16 @@ body {
 }
 
 .item-content {
-  flex: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .item-header {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 4px;
@@ -248,36 +261,17 @@ body {
 
 .item-name {
   font-size: 12px;
-  font-weight: 500;
-  color: #f9fafb;
+  font-weight: 600;
+  color: #e5e7eb;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.rarity-pill {
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-}
-
-/* meta/time/direction lines */
-
 .meta-line,
 .datetime-line,
 .direction-line {
-  display: block;
   font-size: 11px;
-}
-
-.meta-line {
-  color: #9ca3af;
-}
-
-.datetime-line {
   color: #9ca3af;
 }
 
@@ -285,16 +279,27 @@ body {
   color: #d1d5db;
 }
 
-/* ==== Rarity colours ==== */
+/* Rarity pills + colors -------------------------------------------------- */
 
+.rarity-pill {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+/* Common = white */
+.rarity-common .item-name {
+  color: #f9fafb;
+}
 .rarity-common .rarity-pill {
   background: rgba(156, 163, 175, 0.18);
   color: #e5e7eb;
 }
-.rarity-common .item-name {
-  color: #e5e7eb;
-}
 
+/* Uncommon = green */
 .rarity-uncommon .rarity-pill {
   background: rgba(34, 197, 94, 0.18);
   color: #15fa61;
@@ -303,6 +308,7 @@ body {
   color: #15fa61;
 }
 
+/* Rare = blue */
 .rarity-rare .rarity-pill {
   background: rgba(59, 130, 246, 0.18);
   color: #60a5fa;
@@ -311,23 +317,25 @@ body {
   color: #60a5fa;
 }
 
+/* Epic = purple */
 .rarity-epic .rarity-pill {
   background: rgba(168, 85, 247, 0.18);
-  color: #c4b5fd;
+  color: #a855f7;
 }
 .rarity-epic .item-name {
   color: #c4b5fd;
 }
 
+/* Fallback / unknown rarity */
 .rarity-other .rarity-pill {
-  background: rgba(75, 85, 99, 0.25);
+  background: rgba(75, 85, 99, 0.3);
   color: #e5e7eb;
 }
 
-/* ==== Error text ==== */
+/* Error line ------------------------------------------------------------- */
 
 #error {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 11px;
-  color: #f97373;
+  color: #f87171;
 }
