@@ -46,7 +46,7 @@ let sparkline5m = [];
 let lastPriceStr = null;
 
 // Track SALE animation window (per event)
-const SALE_ANIMATION_MS = 20000; // 20 seconds
+const SALE_ANIMATION_MS = 5000; // 5 seconds
 const saleAnimationState = new Map(); // eventKey -> endTimeMs
 
 // ==== CORE BOOTSTRAP ====
@@ -542,7 +542,8 @@ function animateSalePrice(span, finalStr, maxMs) {
     ? match[1].split(".")[1].length
     : 2;
 
-  const duration = Math.min(2000, Math.max(600, maxMs || 2000)); // 0.6–2s
+  // Animate for up to 5s, or the remaining animation window if shorter
+  const duration = Math.min(maxMs || 5000, 5000);
   const start = performance.now();
 
   function frame(now) {

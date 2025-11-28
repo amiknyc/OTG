@@ -468,12 +468,12 @@ body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #22c55e;
+  color: #4dd9b3; /* new green */
 }
 
-/* Blink "sale" label for new events: 1s cycle x 20 = ~20s total */
+/* Blink "sale" label for new events: 1s cycle x 5 = ~5s total */
 .sale-label.sale-animating {
-  animation: sale-blink 1s step-start 20;
+  animation: sale-blink 1s step-start 5;
 }
 
 @keyframes sale-blink {
@@ -500,7 +500,7 @@ body {
 
 /* Final static green price */
 .sale-price.sale-price-final {
-  color: #22c55e;
+  color: #4dd9b3;
 }
 
 /* Line 3: date + time (you already had similar styles) */
