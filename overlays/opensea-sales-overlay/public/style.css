@@ -306,11 +306,15 @@ body {
   text-overflow: ellipsis;
 }
 
-.meta-line,
+.meta-line {
+  font-size: 11px;
+  color: #4dd9b3;
+}
+
 .datetime-line,
 .direction-line {
   font-size: 11px;
-  color: #4dd9b3;
+  color: #9ca3af;
 }
 
 .direction-line {
