@@ -1,36 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <title>OTG Sales Overlay</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/public/style.css" />
+    <meta charset="utf-8" />
+    <title>Off The Grid – GUN Overlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-  <div id="overlay">
-    <!-- GUN token section -->
-    <div class="header">
-      <span class="title">GUN Token Price Action</span>
+    <div id="overlay">
+      <!-- GUN token section -->
+      <div class="header">
+        <span class="title">GUN Token Price Action</span>
+      </div>
+
+      <div id="gun-token-section">
+        <div id="gun-price"></div>
+        <div id="gun-sparkline"></div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Marketplace section -->
+      <div class="subheader">
+        <span class="subtitle">GUN Marketplace Data</span>
+      </div>
+
+      <div id="high-sale"></div>
+      <ul id="events"></ul>
+      <div id="error"></div>
     </div>
 
-    <div id="gun-token-section">
-      <div id="gun-price"></div>
-      <div id="gun-sparkline"></div>
-    </div>
-
-    <div class="section-divider"></div>
-
-    <!-- Marketplace section -->
-    <div class="subheader">
-      <span class="subtitle">GUN Marketplace Data</span>
-    </div>
-
-    <div id="high-sale"></div>
-    <ul id="events"></ul>
-    <div id="error"></div>
-  </div>
-
-  <script src="script.js"></script>
-</body>
+    <!-- IMPORTANT: script.js must live in the same folder as index.html -->
+    <script src="script.js"></script>
+  </body>
 </html>
-
