@@ -177,8 +177,18 @@ body {
 
 /* Sparkline -------------------------------------------------------------- */
 
+/* Sparkline -------------------------------------------------------------- */
+
 #gun-sparkline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
   height: 32px;
+}
+
+#gun-sparkline > div {
+  width: 100%;
+  height: 100%;
 }
 
 #gun-sparkline svg {
@@ -192,27 +202,40 @@ body {
   fill: none;
   stroke-width: 1.5;
   stroke: #6b7280; /* neutral grey fallback */
-
-  /* Animation: draw the line in from left to right */
   stroke-dasharray: 100;
   stroke-dashoffset: 100;
-  animation: spark-draw 1.2s ease-out forwards;
+  animation: spark-draw 1s ease-out forwards;
 }
 
 /* Positive 24H trend = green */
 .sparkline-path.positive {
-  stroke: #4dd9b3; /* green */
+  stroke: #4dd9b3;
 }
 
-/* Negative 24H trend = fuchsia */
+/* Negative 24H trend = fuchsia/red */
 .sparkline-path.negative {
-  stroke: #eb15ae; /* fuchsia */
+  stroke: #eb15ae;
 }
 
-/* Keyframes for sparkline draw animation */
+/* End dot for live sparkline */
+.sparkline-end-dot {
+  fill: #4dd9b3;
+  animation: spark-end-blink 0.8s ease-in-out infinite;
+}
+
 @keyframes spark-draw {
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spark-end-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
   }
 }
 

@@ -34,13 +34,14 @@ let gunMetrics = {
   vol1dUsd: null,
   marketCap1dUsd: null,
   marketCap7dUsd: null,
-  change4hPct: null, // we use this as 24H change
+  change4hPct: null, // 24H change
   sparkline7d: null
 };
 
-// Local 5-minute sparkline history (per session). 12 points = last ~1 hour.
-const SPARKLINE_MAX_POINTS = 12;
-let sparkline5m = [];
+// Live 5-minute sparkline state (session-local)
+const LIVE_SPARK_MAX_POINTS = 24; // last ~2h at 5-min interval
+let liveSpark = [];
+let lastMetricsUpdateMs = 0;
 
 // Cache last rendered price string so we can animate price flips only on change.
 let lastPriceStr = null;
@@ -52,13 +53,12 @@ const saleAnimationState = new Map(); // eventKey -> endTimeMs
 // ==== CORE BOOTSTRAP ====
 
 async function initOverlay() {
-  // GUN price + sparkline
-  fetchGunMetrics();
-  // 5-minute refresh for price + 5-min sparkline
-  setInterval(fetchGunMetrics, 300000);
+  // GUN price + sparklines
+  await fetchGunMetrics();
+  setInterval(fetchGunMetrics, 300000); // 5 min
 
   // Marketplace events
-  fetchEvents();
+  await fetchEvents();
   setInterval(fetchEvents, POLL_INTERVAL_MS);
 }
 
@@ -114,7 +114,8 @@ async function renderEvents(events) {
   const cutoff24h = nowSec - DAY_SECONDS;
 
   const events24h = (events || []).filter((ev) => {
-    const tsRaw = ev.event_timestamp || ev.closing_date;
+    const tsRaw =
+      ev.event_timestamp || ev.closing_date || ev.created_date || ev.occurred_at;
     const ts = toUnixSeconds(tsRaw);
     return typeof ts === "number" && ts >= cutoff24h;
   });
@@ -156,8 +157,9 @@ async function renderEvents(events) {
     const paymentInfo = getPaymentInfo(ev);
     const priceStr = paymentInfo.str;
 
-    const tsRaw = ev.event_timestamp || ev.closing_date;
-    const ts = typeof tsRaw === "number" ? tsRaw : toUnixSeconds(tsRaw);
+    const tsRaw =
+      ev.event_timestamp || ev.closing_date || ev.created_date || ev.occurred_at;
+    const ts = toUnixSeconds(tsRaw);
     const dateStr = ts ? formatDateUnixSeconds(ts) : "";
     const timeStr = ts ? formatUnixSeconds(ts) : "";
 
@@ -217,9 +219,7 @@ async function renderEvents(events) {
           <!-- Line 2: SALE + price (animated) -->
           <div class="sale-line">
             <span class="${saleLabelClass}">sale</span>
-            <span class="${priceClass}" data-final-price="${sanitize(
-              priceStr || ""
-            )}">
+            <span class="${priceClass}">
               ${sanitize(initialPriceText)}
             </span>
           </div>
@@ -360,15 +360,15 @@ async function fetchGunMetrics() {
       sparkline7d: Array.isArray(data.sparkline7d) ? data.sparkline7d : null
     };
 
-    // Update local 5-minute sparkline history
+    // Update live 5-minute sparkline series
     const priceForSpark = gunMetrics.priceUsd;
-    if (priceForSpark != null && !Number.isNaN(Number(priceForSpark))) {
-      sparkline5m.push(Number(priceForSpark));
-      if (sparkline5m.length > SPARKLINE_MAX_POINTS) {
-        // Keep only the most recent N points
-        sparkline5m = sparkline5m.slice(-SPARKLINE_MAX_POINTS);
+    if (priceForSpark != null && !Number.isNaN(priceForSpark)) {
+      liveSpark.push(Number(priceForSpark));
+      if (liveSpark.length > LIVE_SPARK_MAX_POINTS) {
+        liveSpark = liveSpark.slice(-LIVE_SPARK_MAX_POINTS);
       }
     }
+    lastMetricsUpdateMs = Date.now();
 
     renderGunMetrics();
   } catch (err) {
@@ -391,9 +391,12 @@ function nullMetrics() {
 }
 
 function renderGunMetrics() {
-  const el = document.getElementById("gun-price");
-  const sparkEl = document.getElementById("gun-sparkline");
-  if (!el) return;
+  const priceEl = document.getElementById("gun-price");
+  const sparkContainer = document.getElementById("gun-sparkline");
+  const liveEl =
+    document.getElementById("gun-sparkline-live") || sparkContainer;
+  const spark24El = document.getElementById("gun-sparkline-24h");
+  if (!priceEl) return;
 
   const { priceUsd, marketCapUsd, vol1dUsd, change4hPct, sparkline7d } =
     gunMetrics;
@@ -418,7 +421,6 @@ function renderGunMetrics() {
       ? "gun-change negative"
       : "gun-change";
 
-  // Trend class for sparkline
   const trendClass =
     change4hPct == null
       ? ""
@@ -434,7 +436,7 @@ function renderGunMetrics() {
 
   const priceSpanClass = `gun-price${shouldFlip ? " flip-animate" : ""}`;
 
-  el.innerHTML = `
+  priceEl.innerHTML = `
     <div class="gun-metrics">
       <div class="gun-metric-main">
         <span class="gun-label">GUN</span>
@@ -456,27 +458,55 @@ function renderGunMetrics() {
     </div>
   `;
 
-  if (sparkEl) {
-    // Prefer session-local 5-minute history; fall back to 7D until we have enough points
-    let series = [];
-    if (sparkline5m.length >= 2) {
-      series = sparkline5m;
-    } else if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
-      series = sparkline7d;
+  // Live 5-minute sparkline (left)
+  if (liveEl) {
+    if (liveSpark.length >= 2) {
+      const now = Date.now();
+      const isFresh = now - lastMetricsUpdateMs < 5000; // blink end for 5s
+      liveEl.innerHTML = renderSparkline(liveSpark, trendClass, {
+        showEndDot: isFresh
+      });
+    } else {
+      liveEl.innerHTML = "";
+    }
+  }
+
+  // 24H sparkline (right) derived from 7D series
+  if (spark24El) {
+    let series24h = [];
+    if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
+      const len = sparkline7d.length;
+      const windowSize = Math.max(2, Math.floor(len / 7)); // ≈ last 24h
+      series24h = sparkline7d.slice(len - windowSize);
     }
 
-    if (series.length >= 2) {
-      sparkEl.innerHTML = renderSparkline(series, trendClass);
+    if (series24h.length >= 2) {
+      spark24El.innerHTML = renderSparkline(series24h, trendClass, {
+        showEndDot: false
+      });
     } else {
-      sparkEl.innerHTML = "";
+      spark24El.innerHTML = "";
+    }
+  } else if (sparkContainer && !document.getElementById("gun-sparkline-live")) {
+    // Fallback: single sparkline container – render 24H view only
+    if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
+      const len = sparkline7d.length;
+      const windowSize = Math.max(2, Math.floor(len / 7));
+      const series24h = sparkline7d.slice(len - windowSize);
+      sparkContainer.innerHTML = renderSparkline(series24h, trendClass, {
+        showEndDot: false
+      });
+    } else {
+      sparkContainer.innerHTML = "";
     }
   }
 }
 
-function renderSparkline(values, trendClass) {
+function renderSparkline(values, trendClass, opts = {}) {
   const width = 140;
   const height = 32;
   const margin = 2;
+  const showEndDot = opts.showEndDot === true;
 
   const filtered = values.filter(
     (v) => typeof v === "number" && !Number.isNaN(v)
@@ -491,23 +521,39 @@ function renderSparkline(values, trendClass) {
   const innerHeight = height - margin * 2;
 
   let d = "";
+  let lastX = null;
+  let lastY = null;
+
   filtered.forEach((v, i) => {
     const x = margin + i * stepX;
     const norm = (v - min) / range;
     const y = height - margin - norm * innerHeight;
     d += (i === 0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
+    if (i === filtered.length - 1) {
+      lastX = x;
+      lastY = y;
+    }
   });
 
   const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
 
+  const endDot =
+    showEndDot && lastX != null && lastY != null
+      ? `<circle class="sparkline-end-dot" cx="${lastX.toFixed(
+          2
+        )}" cy="${lastY.toFixed(2)}" r="1.8" />`
+      : "";
+
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
       <path class="${cls}" d="${d.trim()}" pathLength="100" />
+      ${endDot}
     </svg>
   `;
 }
 
-// Build a reasonably stable key per event so we can track its animation window
+// ==== SALE KEY + PRICE ANIMATION HELPERS ====
+
 function getEventKey(ev) {
   const nft = ev?.nft || ev?.asset || {};
   const id =
