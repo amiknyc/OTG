@@ -213,9 +213,8 @@ function renderSessionHighCard(ev) {
       </div>
       <div class="high-sale-text">
         <div class="high-label">SESSION HIGH 24H</div>
-        <div class="high-value">
-          ${priceStr ? sanitize(priceStr) + " • " : ""}${sanitize(name)}
-        </div>
+        <div class="high-value">${sanitize(name)}</div>
+        <div class="high-value">${priceStr ? sanitize(priceStr) : ""}</div>
       </div>
     </div>
   `;
@@ -248,9 +247,8 @@ function renderAllTimeHighCard(config) {
       </div>
       <div class="high-sale-text">
         <div class="high-label">ALL-TIME HIGH</div>
-        <div class="high-value">
-          ${sanitize(priceStr)} • ${sanitize(config.name)}
-        </div>
+        <div class="high-value">${sanitize(config.name)}</div>
+        <div class="high-value">${sanitize(priceStr)}</div>
       </div>
     </div>
   `;
