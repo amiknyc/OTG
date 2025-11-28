@@ -45,13 +45,6 @@ let sparkline5m = [];
 // Cache last rendered price string so we can animate price flips only on change.
 let lastPriceStr = null;
 
-// Local 5-minute sparkline history (per session)
-const SPARKLINE_MAX_POINTS = 12;
-let sparkline5m = [];
-
-// Cache last rendered price string so we can animate price flips only on change.
-let lastPriceStr = null;
-
 // Track SALE animation window (per event)
 const SALE_ANIMATION_MS = 20000; // 20 seconds
 const saleAnimationState = new Map(); // eventKey -> endTimeMs
@@ -122,7 +115,8 @@ async function renderEvents(events) {
 
   const events24h = (events || []).filter((ev) => {
     const tsRaw = ev.event_timestamp || ev.closing_date;
-    return typeof tsRaw === "number" && tsRaw >= cutoff24h;
+    const ts = toUnixSeconds(tsRaw);
+    return typeof ts === "number" && ts >= cutoff24h;
   });
 
   const sessionHighEvent = getMaxEventByPrice(events24h);
