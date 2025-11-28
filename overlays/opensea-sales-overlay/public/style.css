@@ -186,63 +186,6 @@ body {
   stroke: #eb15ae; /* fuchsia */
 }
 
-.sparkline-line {
-  stroke-width: 1.5;
-  fill: none;
-  /* your dynamic color (green/fuchsia) is set via JS, so no stroke color here */
-}
-
-/* This class is applied when you want the animation */
-.sparkline-animate {
-  animation: sparkline-draw 1.0s ease-out forwards;
-}
-
-/* Drawing animation */
-@keyframes sparkline-draw {
-  from {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-  }
-  to {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 0;
-  }
-}
-
-/* Optional: subtle glow pulse based on trend */
-.sparkline-pulse-up {
-  animation: sparkline-pulse-up 0.9s ease-out;
-}
-
-.sparkline-pulse-down {
-  animation: sparkline-pulse-down 0.9s ease-out;
-}
-
-@keyframes sparkline-pulse-up {
-  0% {
-    filter: drop-shadow(0 0 0px rgba(0, 255, 127, 0));
-  }
-  50% {
-    filter: drop-shadow(0 0 4px rgba(0, 255, 127, 0.8));
-  }
-  100% {
-    filter: drop-shadow(0 0 0px rgba(0, 255, 127, 0));
-  }
-}
-
-@keyframes sparkline-pulse-down {
-  0% {
-    filter: drop-shadow(0 0 0px rgba(235, 21, 174, 0));
-  }
-  50% {
-    filter: drop-shadow(0 0 4px rgba(235, 21, 174, 0.8));
-  }
-  100% {
-    filter: drop-shadow(0 0 0px rgba(235, 21, 174, 0));
-  }
-}
-
-
 /* High sale cards -------------------------------------------------------- */
 
 #high-sale {
