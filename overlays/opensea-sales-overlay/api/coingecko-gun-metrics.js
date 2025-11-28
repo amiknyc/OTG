@@ -1,8 +1,5 @@
 // api/coingecko-gun-metrics.js
-
-// For the overlay we really just need spot metrics,
-// so we hit /coins/gunz instead of /market_chart,
-// which avoids the "coin not found" issues.
+// Uses CoinGecko /coins endpoint to get spot stats + 7D sparkline
 
 module.exports = async (req, res) => {
   try {
@@ -10,7 +7,7 @@ module.exports = async (req, res) => {
 
     const url =
       `https://api.coingecko.com/api/v3/coins/${id}` +
-      `?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`;
+      `?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=true`;
 
     const cgRes = await fetch(url, {
       headers: { Accept: "application/json" }
@@ -43,20 +40,26 @@ module.exports = async (req, res) => {
         ? md.total_volume.usd
         : null;
 
-    // We no longer have 4H data; use 24H change as our "change" metric.
     const change24hPct =
       typeof md.price_change_percentage_24h === "number"
         ? md.price_change_percentage_24h
         : null;
 
-    // Keep the same response shape the front-end already expects.
+    const sparkline7d =
+      md.sparkline_7d &&
+      Array.isArray(md.sparkline_7d.price)
+        ? md.sparkline_7d.price
+        : null;
+
+    // Keep shape consistent with front-end expectations
     res.status(200).json({
       priceUsd,
       marketCapUsd,
       vol1dUsd,
-      marketCap1dUsd: null,   // not available from this endpoint
-      marketCap7dUsd: null,   // not available from this endpoint
-      change4hPct: change24hPct  // we’ll label it 24H on the UI
+      marketCap1dUsd: null,  // not used in UI now
+      marketCap7dUsd: null,  // not used in UI now
+      change4hPct: change24hPct, // we display as 24H
+      sparkline7d
     });
   } catch (err) {
     console.error("coingecko-gun-metrics handler error:", err);

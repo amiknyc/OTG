@@ -7,24 +7,24 @@ const COLLECTION_SLUG = "off-the-grid";
 const POLL_INTERVAL_MS = 15000; // 15 seconds
 const MAX_ITEMS = 10;
 
-// Backend proxy route for sales
+// Backend routes
 const API_PATH = "/api/opensea-sales.js";
-
-// Backend route for GUN metrics
 const GUN_METRICS_URL = "/api/coingecko-gun-metrics.js";
 
+// Time constants for sales
+const DAY_SECONDS = 24 * 60 * 60;
+
 // Hard-coded all-time high for this collection.
-// EDIT THESE VALUES once you know the true ATH.
 const ALL_TIME_HIGH = {
-  amount: 14444.0, // numeric amount
-  symbol: "GUN",   // token symbol
-  name: "Hitori Yubi Mask", // item name
-  timestamp: 1764263173,    // optional: Unix seconds; or null
-  thumbUrl: ""              // optional: direct image URL for the ATH item
+  amount: 14444.0,
+  symbol: "GUN",
+  name: "Hitori Yubi Mask",
+  timestamp: 1764263173,
+  thumbUrl: ""
 };
 
 // Cache rarity per NFT to avoid refetching metadata
-const rarityCache = new Map(); // key: metadata_url or collection:id -> { label, className } | null
+const rarityCache = new Map();
 
 // GUN metrics state
 let gunMetrics = {
@@ -33,20 +33,16 @@ let gunMetrics = {
   vol1dUsd: null,
   marketCap1dUsd: null,
   marketCap7dUsd: null,
-  change4hPct: null
+  change4hPct: null,   // we use this as 24H change
+  sparkline7d: null
 };
 
-// Time constants for sales logic
-const DAY_SECONDS = 24 * 60 * 60;
-
-// ==== CORE LOGIC (BOOTSTRAP) ====
+// ==== CORE BOOTSTRAP ====
 
 async function initOverlay() {
-  // Start GUN metrics polling
   fetchGunMetrics();
-  setInterval(fetchGunMetrics, 300000); // 5 minutes
+  setInterval(fetchGunMetrics, 300000); // 5 min
 
-  // Start events polling
   fetchEvents();
   setInterval(fetchEvents, POLL_INTERVAL_MS);
 }
@@ -88,7 +84,7 @@ async function renderEvents(events) {
 
   const slice = events.slice(0, MAX_ITEMS);
 
-  // ----- 24H SESSION HIGH -----
+  // 24H session high
   const nowSec = Math.floor(Date.now() / 1000);
   const cutoff24h = nowSec - DAY_SECONDS;
 
@@ -99,7 +95,7 @@ async function renderEvents(events) {
 
   const sessionHighEvent = getMaxEventByPrice(events24h);
 
-  // ----- TOP ROW: SESSION HIGH 24H (from events) + ALL-TIME HIGH (from config) -----
+  // Top row: session high 24H + all-time high
   if (sessionHighEvent || ALL_TIME_HIGH) {
     highEl.style.display = "flex";
     highEl.innerHTML = `
@@ -111,7 +107,7 @@ async function renderEvents(events) {
     highEl.style.display = "none";
   }
 
-  // ----- LIST RENDER -----
+  // List
   if (!slice.length) {
     const li = document.createElement("li");
     li.innerHTML =
@@ -123,32 +119,24 @@ async function renderEvents(events) {
   for (const ev of slice) {
     const li = document.createElement("li");
 
-    // Name
     const nft = ev?.nft || {};
-    const name =
-      nft.name ||
-      `#${nft.identifier || "?"}`;
+    const name = nft.name || `#${nft.identifier || "?"}`;
 
-    // Rarity (metadata_url, cached)
     const rarityInfo = await getRarityForEvent(ev);
     const rarityClass = rarityInfo ? rarityInfo.className : "other";
 
-    // Price (2 decimals)
     const paymentInfo = getPaymentInfo(ev);
     const priceStr = paymentInfo.str;
 
-    // Timestamp -> date + time
     const ts = ev.event_timestamp || ev.closing_date;
     const dateStr = ts ? formatDateUnixSeconds(ts) : "";
     const timeStr = ts ? formatUnixSeconds(ts) : "";
 
-    // Direction: seller -> buyer (addresses only)
     const sellerStr = formatAddress(ev.seller);
     const buyerStr = formatAddress(ev.buyer);
     const directionStr =
       sellerStr && buyerStr ? `${sellerStr} → ${buyerStr}` : "";
 
-    // Thumbnail
     const thumbUrl =
       nft.display_image_url ||
       nft.image_url ||
@@ -205,7 +193,7 @@ async function renderEvents(events) {
   }
 }
 
-// ==== TOP ROW RENDERING (SESSION HIGH / ALL-TIME HIGH) ====
+// ==== HIGH CARDS ====
 
 function renderSessionHighCard(ev) {
   if (!ev) {
@@ -281,7 +269,7 @@ function renderAllTimeHighCard(config) {
   `;
 }
 
-// ==== GUN METRICS (via /api/gun-metrics.js) ====
+// ==== GUN METRICS (COINGECKO) ====
 
 async function fetchGunMetrics() {
   try {
@@ -291,64 +279,66 @@ async function fetchGunMetrics() {
 
     if (!res.ok) {
       console.error("gun-metrics error HTTP", res.status);
-      gunMetrics = {
-        priceUsd: null,
-        marketCapUsd: null,
-        vol1dUsd: null,
-        marketCap1dUsd: null,
-        marketCap7dUsd: null,
-        change4hPct: null
-      };
+      gunMetrics = nullMetrics();
       renderGunMetrics();
       return;
     }
 
     const data = await res.json();
+    console.log("gun-metrics data", data);
+
     gunMetrics = {
       priceUsd: data.priceUsd ?? null,
       marketCapUsd: data.marketCapUsd ?? null,
       vol1dUsd: data.vol1dUsd ?? null,
       marketCap1dUsd: data.marketCap1dUsd ?? null,
       marketCap7dUsd: data.marketCap7dUsd ?? null,
-      change4hPct: data.change4hPct ?? null
+      change4hPct: data.change4hPct ?? null,
+      sparkline7d: Array.isArray(data.sparkline7d) ? data.sparkline7d : null
     };
 
     renderGunMetrics();
   } catch (err) {
     console.error("Error fetching gun-metrics", err);
-    gunMetrics = {
-      priceUsd: null,
-      marketCapUsd: null,
-      vol1dUsd: null,
-      marketCap1dUsd: null,
-      marketCap7dUsd: null,
-      change4hPct: null
-    };
+    gunMetrics = nullMetrics();
     renderGunMetrics();
   }
 }
 
+function nullMetrics() {
+  return {
+    priceUsd: null,
+    marketCapUsd: null,
+    vol1dUsd: null,
+    marketCap1dUsd: null,
+    marketCap7dUsd: null,
+    change4hPct: null,
+    sparkline7d: null
+  };
+}
+
 function renderGunMetrics() {
   const el = document.getElementById("gun-price");
+  const sparkEl = document.getElementById("gun-sparkline");
   if (!el) return;
 
   const {
     priceUsd,
     marketCapUsd,
     vol1dUsd,
-    marketCap1dUsd,
-    marketCap7dUsd,
-    change4hPct
+    change4hPct,
+    sparkline7d
   } = gunMetrics;
 
-  const priceStr = priceUsd != null
-    ? (priceUsd < 1 ? `$${priceUsd.toFixed(4)}` : `$${priceUsd.toFixed(2)}`)
-    : "—";
+  const priceStr =
+    priceUsd != null
+      ? priceUsd < 1
+        ? `$${priceUsd.toFixed(4)}`
+        : `$${priceUsd.toFixed(3)}`
+      : "—";
 
   const capStr = formatUsdShort(marketCapUsd);
   const volStr = formatUsdShort(vol1dUsd);
-  const cap1dStr = formatUsdShort(marketCap1dUsd);
-  const cap7dStr = formatUsdShort(marketCap7dUsd);
   const changeStr = formatPct(change4hPct);
 
   const changeClass =
@@ -376,20 +366,50 @@ function renderGunMetrics() {
           <span class="metric-label">Vol 24H</span>
           <span class="metric-value">${sanitize(volStr)}</span>
         </div>
-        <div class="metric">
-          <span class="metric-label">Mkt Cap 24H</span>
-          <span class="metric-value">${sanitize(cap1dStr)}</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Mkt Cap 7D</span>
-          <span class="metric-value">${sanitize(cap7dStr)}</span>
-        </div>
       </div>
     </div>
   `;
+
+  if (sparkEl) {
+    if (sparkline7d && sparkline7d.length >= 2) {
+      sparkEl.innerHTML = renderSparkline(sparkline7d);
+    } else {
+      sparkEl.innerHTML = "";
+    }
+  }
 }
 
-// ==== PAYMENT / SALES HELPERS ====
+function renderSparkline(values) {
+  const width = 140;
+  const height = 32;
+  const margin = 2;
+
+  const filtered = values.filter((v) => typeof v === "number" && !Number.isNaN(v));
+  if (filtered.length < 2) return "";
+
+  const min = Math.min(...filtered);
+  const max = Math.max(...filtered);
+  const range = max - min || 1;
+
+  const stepX = (width - margin * 2) / (filtered.length - 1);
+  const innerHeight = height - margin * 2;
+
+  let d = "";
+  filtered.forEach((v, i) => {
+    const x = margin + i * stepX;
+    const norm = (v - min) / range;
+    const y = height - margin - norm * innerHeight;
+    d += (i === 0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
+  });
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <path class="sparkline-path" d="${d.trim()}" />
+    </svg>
+  `;
+}
+
+// ==== PAYMENT / RARITY / FORMATTING HELPERS ====
 
 function getPaymentInfo(ev) {
   const payment = ev?.payment || {};
@@ -411,7 +431,6 @@ function getPaymentInfo(ev) {
 function getMaxEventByPrice(events) {
   let best = null;
   let bestAmount = -Infinity;
-
   for (const ev of events) {
     const info = getPaymentInfo(ev);
     if (info.amount != null && info.amount > bestAmount) {
@@ -419,11 +438,8 @@ function getMaxEventByPrice(events) {
       best = ev;
     }
   }
-
   return best;
 }
-
-// ==== RARITY VIA METADATA ====
 
 async function getRarityForEvent(ev) {
   const nft = ev?.nft;
@@ -436,11 +452,7 @@ async function getRarityForEvent(ev) {
       : null);
 
   if (!key) return null;
-
-  if (rarityCache.has(key)) {
-    return rarityCache.get(key);
-  }
-
+  if (rarityCache.has(key)) return rarityCache.get(key);
   if (!nft.metadata_url) {
     rarityCache.set(key, null);
     return null;
@@ -512,8 +524,6 @@ async function getRarityForEvent(ev) {
   }
 }
 
-// ==== MISC HELPERS ====
-
 function formatAddress(addr) {
   if (!addr || typeof addr !== "string") return "";
   const clean = addr.toLowerCase();
@@ -580,5 +590,5 @@ function sanitize(str) {
     .replace(/>/g, "&gt;");
 }
 
-// ==== BOOTSTRAP ====
+// ==== START ====
 initOverlay();

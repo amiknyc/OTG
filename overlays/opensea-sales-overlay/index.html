@@ -7,18 +7,30 @@
     <link rel="stylesheet" href="/public/style.css" />
   </head>
   <body>
-    <div id="overlay">
-  <div class="header">
-    <span class="title">Off The Grid – Recent Sales</span>
+  <div id="overlay">
+    <!-- GUN token section -->
+    <div class="header">
+      <span class="title">GUN Token Price Action</span>
+    </div>
+
+    <div id="gun-token-section">
+      <div id="gun-price"></div>
+      <div id="gun-sparkline"></div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- Marketplace section -->
+    <div class="subheader">
+      <span class="subtitle">GUN Marketplace Data</span>
+    </div>
+
+    <div id="high-sale"></div>
+    <ul id="events"></ul>
+    <div id="error"></div>
   </div>
 
-  <div id="gun-price"></div>
-  <div id="high-sale"></div>
-  <ul id="events"></ul>
-  <div id="error"></div>
-</div>
-
-    <script src="/public/script.js"></script>
-  </body>
+  <script src="script.js"></script>
+</body>
 </html>
 
