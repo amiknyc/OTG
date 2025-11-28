@@ -11,7 +11,7 @@ const MAX_ITEMS = 10;
 const API_PATH = "/api/opensea-sales.js";
 
 // Backend route for GUN metrics (this is the new function)
-const GUN_METRICS_URL = "/api/gun-metrics.js";
+const GUN_METRICS_URL = "/api/coingecko-gun-metrics.js";
 
 // Hard-coded all-time high for this collection.
 // EDIT THESE VALUES once you know the true ATH.
