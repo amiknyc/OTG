@@ -1,38 +1,24 @@
 // api/coingecko-gun-metrics.js
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
-const SEVEN_DAYS_MS = 7 * DAY_MS;
-
-// Helper: pick first [t, v] where t >= targetMs (or last point)
-function findValueAtOrAfter(arr, targetMs) {
-  if (!arr || !arr.length) return null;
-  for (let i = 0; i < arr.length; i++) {
-    const [t] = arr[i];
-    if (t >= targetMs) return arr[i];
-  }
-  return arr[arr.length - 1];
-}
+// For the overlay we really just need spot metrics,
+// so we hit /coins/gunz instead of /market_chart,
+// which avoids the "coin not found" issues.
 
 module.exports = async (req, res) => {
   try {
-    const id = process.env.COINGECKO_ID || "gunz"; // fallback
-    const apiKey = process.env.COINGECKO_API_KEY || "";
+    const id = "gunz"; // CoinGecko API ID for Gunz (GUN)
 
-    // ALWAYS use the public host for demo / free keys
-    const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=7`;
+    const url =
+      `https://api.coingecko.com/api/v3/coins/${id}` +
+      `?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`;
 
-    const headers = { Accept: "application/json" };
-    if (apiKey) {
-      // Demo / free key header (Coingecko docs)
-      headers["x-cg-demo-api-key"] = apiKey;
-    }
-
-    const cgRes = await fetch(url, { headers });
+    const cgRes = await fetch(url, {
+      headers: { Accept: "application/json" }
+    });
 
     if (!cgRes.ok) {
       const body = await cgRes.text();
-      console.error("Coingecko error:", cgRes.status, body);
+      console.error("Coingecko /coins error:", cgRes.status, body);
       res
         .status(cgRes.status)
         .json({ error: "Coingecko error", status: cgRes.status, body });
@@ -40,47 +26,37 @@ module.exports = async (req, res) => {
     }
 
     const data = await cgRes.json();
-    const prices = data.prices || [];
-    const caps = data.market_caps || [];
-    const vols = data.total_volumes || [];
+    const md = data.market_data || {};
 
-    if (!prices.length) {
-      res.status(200).json({
-        priceUsd: null,
-        marketCapUsd: null,
-        vol1dUsd: null,
-        marketCap1dUsd: null,
-        marketCap7dUsd: null,
-        change4hPct: null
-      });
-      return;
-    }
+    const priceUsd =
+      md.current_price && typeof md.current_price.usd === "number"
+        ? md.current_price.usd
+        : null;
 
-    const lastIdx = prices.length - 1;
-    const [tNowMs, priceNow] = prices[lastIdx];
-    const marketCapNow = (caps[lastIdx] && caps[lastIdx][1]) || null;
-    const volNow = (vols[lastIdx] && vols[lastIdx][1]) || null;
+    const marketCapUsd =
+      md.market_cap && typeof md.market_cap.usd === "number"
+        ? md.market_cap.usd
+        : null;
 
-    const t4hAgo = tNowMs - FOUR_HOURS_MS;
-    const t1dAgo = tNowMs - DAY_MS;
-    const t7dAgo = tNowMs - SEVEN_DAYS_MS;
+    const vol1dUsd =
+      md.total_volume && typeof md.total_volume.usd === "number"
+        ? md.total_volume.usd
+        : null;
 
-    const price4h = findValueAtOrAfter(prices, t4hAgo)?.[1] ?? null;
-    const cap1d = findValueAtOrAfter(caps, t1dAgo)?.[1] ?? null;
-    const cap7d = findValueAtOrAfter(caps, t7dAgo)?.[1] ?? (caps[0]?.[1] ?? null);
+    // We no longer have 4H data; use 24H change as our "change" metric.
+    const change24hPct =
+      typeof md.price_change_percentage_24h === "number"
+        ? md.price_change_percentage_24h
+        : null;
 
-    let change4hPct = null;
-    if (price4h && price4h > 0) {
-      change4hPct = ((priceNow - price4h) / price4h) * 100;
-    }
-
+    // Keep the same response shape the front-end already expects.
     res.status(200).json({
-      priceUsd: priceNow ?? null,
-      marketCapUsd: marketCapNow ?? null,
-      vol1dUsd: volNow ?? null,
-      marketCap1dUsd: cap1d ?? null,
-      marketCap7dUsd: cap7d ?? null,
-      change4hPct
+      priceUsd,
+      marketCapUsd,
+      vol1dUsd,
+      marketCap1dUsd: null,   // not available from this endpoint
+      marketCap7dUsd: null,   // not available from this endpoint
+      change4hPct: change24hPct  // we’ll label it 24H on the UI
     });
   } catch (err) {
     console.error("coingecko-gun-metrics handler error:", err);

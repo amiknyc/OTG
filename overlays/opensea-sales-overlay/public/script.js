@@ -365,7 +365,7 @@ function renderGunMetrics() {
       <div class="gun-metric-main">
         <span class="gun-label">GUN</span>
         <span class="gun-price">${sanitize(priceStr)}</span>
-        <span class="${changeClass}">${sanitize(changeStr)} (4H)</span>
+        <span class="${changeClass}">${sanitize(changeStr)} (24H)</span>
       </div>
       <div class="gun-metric-grid">
         <div class="metric">
