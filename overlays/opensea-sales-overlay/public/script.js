@@ -7,24 +7,11 @@ const COLLECTION_SLUG = "off-the-grid";
 const POLL_INTERVAL_MS = 15000; // 15 seconds
 const MAX_ITEMS = 10;
 
-// Backend proxy route
+// Backend proxy route for sales
 const API_PATH = "/api/opensea-sales.js";
 
-// Time constants
-const DAY_SECONDS = 24 * 60 * 60;
-const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-// ---- Coingecko config ----
-
-// Set this to the actual Coingecko ID for the token you want to display.
-const COINGECKO_ID = "gunz"; //
-
-// We call:
-//   https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currency=usd&days=7&interval=hourly
-// and derive all metrics from that single response.
-const GUN_METRICS_POLL_MS = 300000; // 5 minutes
+// Backend route for GUN metrics (this is the new function)
+const GUN_METRICS_URL = "/api/gun-metrics.js";
 
 // Hard-coded all-time high for this collection.
 // EDIT THESE VALUES once you know the true ATH.
@@ -49,16 +36,15 @@ let gunMetrics = {
   change4hPct: null
 };
 
+// Time constants for sales logic
+const DAY_SECONDS = 24 * 60 * 60;
+
 // ==== CORE LOGIC (BOOTSTRAP) ====
 
 async function initOverlay() {
   // Start GUN metrics polling
-  if (COINGECKO_ID) {
-    fetchGunMetrics();
-    setInterval(fetchGunMetrics, GUN_METRICS_POLL_MS);
-  } else {
-    renderGunMetrics();
-  }
+  fetchGunMetrics();
+  setInterval(fetchGunMetrics, 300000); // 5 minutes
 
   // Start events polling
   fetchEvents();
@@ -295,25 +281,16 @@ function renderAllTimeHighCard(config) {
   `;
 }
 
-// ==== GUN METRICS (Coingecko) ====
+// ==== GUN METRICS (via /api/gun-metrics.js) ====
 
 async function fetchGunMetrics() {
   try {
-    if (!COINGECKO_ID) {
-      renderGunMetrics();
-      return;
-    }
+    const res = await fetch(GUN_METRICS_URL, {
+      headers: { Accept: "application/json" }
+    });
 
-    const url = `https://api.coingecko.com/api/v3/coins/${COINGECKO_ID}/market_chart?vs_currency=usd&days=7&interval=hourly`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error(`Coingecko HTTP ${res.status}`);
-
-    const data = await res.json();
-    const prices = data.prices || [];
-    const caps = data.market_caps || [];
-    const vols = data.total_volumes || [];
-
-    if (!prices.length) {
+    if (!res.ok) {
+      console.error("gun-metrics error HTTP", res.status);
       gunMetrics = {
         priceUsd: null,
         marketCapUsd: null,
@@ -326,36 +303,19 @@ async function fetchGunMetrics() {
       return;
     }
 
-    const lastIdx = prices.length - 1;
-    const [tNowMs, priceNow] = prices[lastIdx];
-    const marketCapNow = (caps[lastIdx] && caps[lastIdx][1]) || null;
-    const volNow = (vols[lastIdx] && vols[lastIdx][1]) || null;
-
-    const t4hAgo = tNowMs - FOUR_HOURS_MS;
-    const t1dAgo = tNowMs - ONE_DAY_MS;
-    const t7dAgo = tNowMs - SEVEN_DAYS_MS;
-
-    const price4h = findValueAtOrAfter(prices, t4hAgo)?.[1] ?? null;
-    const cap1d = findValueAtOrAfter(caps, t1dAgo)?.[1] ?? null;
-    const cap7d = findValueAtOrAfter(caps, t7dAgo)?.[1] ?? (caps[0]?.[1] ?? null);
-
-    let change4hPct = null;
-    if (price4h && price4h > 0) {
-      change4hPct = ((priceNow - price4h) / price4h) * 100;
-    }
-
+    const data = await res.json();
     gunMetrics = {
-      priceUsd: priceNow ?? null,
-      marketCapUsd: marketCapNow ?? null,
-      vol1dUsd: volNow ?? null,
-      marketCap1dUsd: cap1d ?? null,
-      marketCap7dUsd: cap7d ?? null,
-      change4hPct
+      priceUsd: data.priceUsd ?? null,
+      marketCapUsd: data.marketCapUsd ?? null,
+      vol1dUsd: data.vol1dUsd ?? null,
+      marketCap1dUsd: data.marketCap1dUsd ?? null,
+      marketCap7dUsd: data.marketCap7dUsd ?? null,
+      change4hPct: data.change4hPct ?? null
     };
 
     renderGunMetrics();
   } catch (err) {
-    console.error("Error fetching GUN metrics", err);
+    console.error("Error fetching gun-metrics", err);
     gunMetrics = {
       priceUsd: null,
       marketCapUsd: null,
@@ -429,7 +389,7 @@ function renderGunMetrics() {
   `;
 }
 
-// ==== PAYMENT / HIGH HELPERS ====
+// ==== PAYMENT / SALES HELPERS ====
 
 function getPaymentInfo(ev) {
   const payment = ev?.payment || {};
@@ -461,15 +421,6 @@ function getMaxEventByPrice(events) {
   }
 
   return best;
-}
-
-function findValueAtOrAfter(arr, targetMs) {
-  if (!arr || !arr.length) return null;
-  for (let i = 0; i < arr.length; i++) {
-    const [t, v] = arr[i];
-    if (t >= targetMs) return arr[i];
-  }
-  return arr[arr.length - 1];
 }
 
 // ==== RARITY VIA METADATA ====
