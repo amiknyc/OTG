@@ -12,6 +12,19 @@ const API_PATH = "/api/opensea-sales.js";
 
 // Time constants
 const DAY_SECONDS = 24 * 60 * 60;
+const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+// ---- Coingecko config ----
+
+// Set this to the actual Coingecko ID for the token you want to display.
+const COINGECKO_ID = "gunz"; //
+
+// We call:
+//   https://api.coingecko.com/api/v3/coins/{id}/market_chart?vs_currency=usd&days=7&interval=hourly
+// and derive all metrics from that single response.
+const GUN_METRICS_POLL_MS = 300000; // 5 minutes
 
 // Hard-coded all-time high for this collection.
 // EDIT THESE VALUES once you know the true ATH.
@@ -26,11 +39,37 @@ const ALL_TIME_HIGH = {
 // Cache rarity per NFT to avoid refetching metadata
 const rarityCache = new Map(); // key: metadata_url or collection:id -> { label, className } | null
 
-// ==== CORE LOGIC ====
+// GUN metrics state
+let gunMetrics = {
+  priceUsd: null,
+  marketCapUsd: null,
+  vol1dUsd: null,
+  marketCap1dUsd: null,
+  marketCap7dUsd: null,
+  change4hPct: null
+};
+
+// ==== CORE LOGIC (BOOTSTRAP) ====
+
+async function initOverlay() {
+  // Start GUN metrics polling
+  if (COINGECKO_ID) {
+    fetchGunMetrics();
+    setInterval(fetchGunMetrics, GUN_METRICS_POLL_MS);
+  } else {
+    renderGunMetrics();
+  }
+
+  // Start events polling
+  fetchEvents();
+  setInterval(fetchEvents, POLL_INTERVAL_MS);
+}
+
+// ==== EVENTS (SALES) ====
 
 async function fetchEvents() {
   const errorEl = document.getElementById("error");
-  errorEl.textContent = "";
+  if (errorEl) errorEl.textContent = "";
 
   const url = `${API_PATH}?collection=${encodeURIComponent(
     COLLECTION_SLUG
@@ -50,13 +89,15 @@ async function fetchEvents() {
     await renderEvents(events);
   } catch (err) {
     console.error("Error fetching via proxy:", err);
-    errorEl.textContent = "Error loading sales feed";
+    if (errorEl) errorEl.textContent = "Error loading sales feed";
   }
 }
 
 async function renderEvents(events) {
   const ul = document.getElementById("events");
   const highEl = document.getElementById("high-sale");
+  if (!ul || !highEl) return;
+
   ul.innerHTML = "";
 
   const slice = events.slice(0, MAX_ITEMS);
@@ -178,7 +219,7 @@ async function renderEvents(events) {
   }
 }
 
-// ==== TOP ROW RENDERING ====
+// ==== TOP ROW RENDERING (SESSION HIGH / ALL-TIME HIGH) ====
 
 function renderSessionHighCard(ev) {
   if (!ev) {
@@ -254,6 +295,140 @@ function renderAllTimeHighCard(config) {
   `;
 }
 
+// ==== GUN METRICS (Coingecko) ====
+
+async function fetchGunMetrics() {
+  try {
+    if (!COINGECKO_ID) {
+      renderGunMetrics();
+      return;
+    }
+
+    const url = `https://api.coingecko.com/api/v3/coins/${COINGECKO_ID}/market_chart?vs_currency=usd&days=7&interval=hourly`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`Coingecko HTTP ${res.status}`);
+
+    const data = await res.json();
+    const prices = data.prices || [];
+    const caps = data.market_caps || [];
+    const vols = data.total_volumes || [];
+
+    if (!prices.length) {
+      gunMetrics = {
+        priceUsd: null,
+        marketCapUsd: null,
+        vol1dUsd: null,
+        marketCap1dUsd: null,
+        marketCap7dUsd: null,
+        change4hPct: null
+      };
+      renderGunMetrics();
+      return;
+    }
+
+    const lastIdx = prices.length - 1;
+    const [tNowMs, priceNow] = prices[lastIdx];
+    const marketCapNow = (caps[lastIdx] && caps[lastIdx][1]) || null;
+    const volNow = (vols[lastIdx] && vols[lastIdx][1]) || null;
+
+    const t4hAgo = tNowMs - FOUR_HOURS_MS;
+    const t1dAgo = tNowMs - ONE_DAY_MS;
+    const t7dAgo = tNowMs - SEVEN_DAYS_MS;
+
+    const price4h = findValueAtOrAfter(prices, t4hAgo)?.[1] ?? null;
+    const cap1d = findValueAtOrAfter(caps, t1dAgo)?.[1] ?? null;
+    const cap7d = findValueAtOrAfter(caps, t7dAgo)?.[1] ?? (caps[0]?.[1] ?? null);
+
+    let change4hPct = null;
+    if (price4h && price4h > 0) {
+      change4hPct = ((priceNow - price4h) / price4h) * 100;
+    }
+
+    gunMetrics = {
+      priceUsd: priceNow ?? null,
+      marketCapUsd: marketCapNow ?? null,
+      vol1dUsd: volNow ?? null,
+      marketCap1dUsd: cap1d ?? null,
+      marketCap7dUsd: cap7d ?? null,
+      change4hPct
+    };
+
+    renderGunMetrics();
+  } catch (err) {
+    console.error("Error fetching GUN metrics", err);
+    gunMetrics = {
+      priceUsd: null,
+      marketCapUsd: null,
+      vol1dUsd: null,
+      marketCap1dUsd: null,
+      marketCap7dUsd: null,
+      change4hPct: null
+    };
+    renderGunMetrics();
+  }
+}
+
+function renderGunMetrics() {
+  const el = document.getElementById("gun-price");
+  if (!el) return;
+
+  const {
+    priceUsd,
+    marketCapUsd,
+    vol1dUsd,
+    marketCap1dUsd,
+    marketCap7dUsd,
+    change4hPct
+  } = gunMetrics;
+
+  const priceStr = priceUsd != null
+    ? (priceUsd < 1 ? `$${priceUsd.toFixed(4)}` : `$${priceUsd.toFixed(2)}`)
+    : "—";
+
+  const capStr = formatUsdShort(marketCapUsd);
+  const volStr = formatUsdShort(vol1dUsd);
+  const cap1dStr = formatUsdShort(marketCap1dUsd);
+  const cap7dStr = formatUsdShort(marketCap7dUsd);
+  const changeStr = formatPct(change4hPct);
+
+  const changeClass =
+    change4hPct == null
+      ? ""
+      : change4hPct > 0
+      ? "gun-change positive"
+      : change4hPct < 0
+      ? "gun-change negative"
+      : "gun-change";
+
+  el.innerHTML = `
+    <div class="gun-metrics">
+      <div class="gun-metric-main">
+        <span class="gun-label">GUN</span>
+        <span class="gun-price">${sanitize(priceStr)}</span>
+        <span class="${changeClass}">${sanitize(changeStr)} (4H)</span>
+      </div>
+      <div class="gun-metric-grid">
+        <div class="metric">
+          <span class="metric-label">Mkt Cap</span>
+          <span class="metric-value">${sanitize(capStr)}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Vol 24H</span>
+          <span class="metric-value">${sanitize(volStr)}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Mkt Cap 24H</span>
+          <span class="metric-value">${sanitize(cap1dStr)}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Mkt Cap 7D</span>
+          <span class="metric-value">${sanitize(cap7dStr)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 // ==== PAYMENT / HIGH HELPERS ====
 
 function getPaymentInfo(ev) {
@@ -286,6 +461,15 @@ function getMaxEventByPrice(events) {
   }
 
   return best;
+}
+
+function findValueAtOrAfter(arr, targetMs) {
+  if (!arr || !arr.length) return null;
+  for (let i = 0; i < arr.length; i++) {
+    const [t, v] = arr[i];
+    if (t >= targetMs) return arr[i];
+  }
+  return arr[arr.length - 1];
 }
 
 // ==== RARITY VIA METADATA ====
@@ -422,6 +606,21 @@ function getOrdinalSuffix(n) {
   }
 }
 
+function formatUsdShort(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
+  return `$${n.toFixed(2)}`;
+}
+
+function formatPct(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)}%`;
+}
+
 function sanitize(str) {
   if (!str && str !== 0) return "";
   return String(str)
@@ -430,6 +629,5 @@ function sanitize(str) {
     .replace(/>/g, "&gt;");
 }
 
-// Initial load + polling
-fetchEvents();
-setInterval(fetchEvents, POLL_INTERVAL_MS);
+// ==== BOOTSTRAP ====
+initOverlay();

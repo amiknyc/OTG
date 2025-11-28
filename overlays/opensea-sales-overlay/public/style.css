@@ -35,6 +35,69 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* GUN price block */
+
+#gun-price {
+  margin-bottom: 6px;
+}
+
+.gun-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #e5e7eb;
+}
+
+/* Main row: symbol, price, 4H change */
+.gun-metric-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.gun-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.gun-price {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.gun-change {
+  font-size: 11px;
+}
+
+.gun-change.positive {
+  color: #4ade80; /* green */
+}
+
+.gun-change.negative {
+  color: #f97373; /* red */
+}
+
+/* Grid of secondary metrics */
+.gun-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+}
+
+.metric-label {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.metric-value {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+
 /* High sale block (top row with two cards) */
 #high-sale {
   display: flex;
