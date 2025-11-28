@@ -37,6 +37,14 @@ let gunMetrics = {
   sparkline7d: null
 };
 
+// Local 5-minute sparkline (per session)
+// 12 points = last ~1 hour at 5-minute refresh
+const SPARKLINE_MAX_POINTS = 12;
+let sparkline5m = [];
+
+// Cache last rendered price string so we can detect changes
+let lastPriceStr = null;
+
 // ==== CORE BOOTSTRAP ====
 
 async function initOverlay() {
@@ -285,6 +293,7 @@ async function fetchGunMetrics() {
     }
 
     const data = await res.json();
+        const data = await res.json();
     console.log("gun-metrics data", data);
 
     gunMetrics = {
@@ -297,7 +306,18 @@ async function fetchGunMetrics() {
       sparkline7d: Array.isArray(data.sparkline7d) ? data.sparkline7d : null
     };
 
+    // Update local 5-minute sparkline history
+    const priceForSpark = data.priceUsd ?? null;
+    if (priceForSpark != null && !Number.isNaN(Number(priceForSpark))) {
+      sparkline5m.push(Number(priceForSpark));
+      if (sparkline5m.length > SPARKLINE_MAX_POINTS) {
+        // Keep only the most recent N points
+        sparkline5m = sparkline5m.slice(-SPARKLINE_MAX_POINTS);
+      }
+    }
+
     renderGunMetrics();
+
   } catch (err) {
     console.error("Error fetching gun-metrics", err);
     gunMetrics = nullMetrics();
@@ -330,16 +350,21 @@ function renderGunMetrics() {
     sparkline7d
   } = gunMetrics;
 
-  const priceStr =
+    const priceStr =
     priceUsd != null
       ? priceUsd < 1
         ? `$${priceUsd.toFixed(4)}`
         : `$${priceUsd.toFixed(3)}`
       : "—";
 
+  // Decide whether to trigger flip animation (skip first render)
+  const shouldFlip = lastPriceStr !== null && priceStr !== lastPriceStr;
+  lastPriceStr = priceStr;
+
   const capStr = formatUsdShort(marketCapUsd);
   const volStr = formatUsdShort(vol1dUsd);
   const changeStr = formatPct(change4hPct);
+
 
   const changeClass =
     change4hPct == null
@@ -364,7 +389,9 @@ function renderGunMetrics() {
     <div class="gun-metrics">
       <div class="gun-metric-main">
         <span class="gun-label">GUN</span>
-        <span class="gun-price">${sanitize(priceStr)}</span>
+        <span class="gun-price${shouldFlip ? " flip-animate" : ""}">
+          ${sanitize(priceStr)}
+        </span>
         <span class="${changeClass}">${sanitize(changeStr)} (24H)</span>
       </div>
       <div class="gun-metric-grid">
@@ -380,15 +407,20 @@ function renderGunMetrics() {
     </div>
   `;
 
-  if (sparkEl) {
-    if (sparkline7d && sparkline7d.length >= 2) {
-      sparkEl.innerHTML = renderSparkline(sparkline7d, trendClass);
+    if (sparkEl) {
+    // Prefer session-local 5-minute history; fall back to 7D until we have enough points
+    const series =
+      sparkline5m.length >= 2
+        ? sparkline5m
+        : (sparkline7d && sparkline7d.length >= 2 ? sparkline7d : []);
+
+    if (series.length >= 2) {
+      sparkEl.innerHTML = renderSparkline(series, trendClass);
     } else {
       sparkEl.innerHTML = "";
     }
   }
 }
-
 
 function renderSparkline(values, trendClass) {
   const width = 140;

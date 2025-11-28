@@ -114,6 +114,9 @@ body {
   display: flex;
   align-items: baseline;
   gap: 6px;
+
+  /* Needed for 3D flip effect */
+  perspective: 600px;
 }
 
 .gun-label {
@@ -126,18 +129,42 @@ body {
 .gun-price {
   font-weight: 600;
   font-size: 12px;
+
+  /* Make it behave like a flip card */
+  display: inline-block;
+  transform-origin: center bottom;
 }
 
+/* Apply flip animation when class is present */
+.gun-price.flip-animate {
+  animation: gun-price-flip 0.5s ease-out;
+}
+
+/* 3D flip keyframes – "flip clock" feel */
+@keyframes gun-price-flip {
+  0% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateX(-90deg);
+    opacity: 0.2;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
 .gun-change {
   font-size: 11px;
 }
 
 .gun-change.positive {
-  color: #4ade80;
+  color: #4dd9b3;
 }
 
 .gun-change.negative {
-  color: #f97373;
+  color: #eb15ae;
 }
 
 /* Two-column metrics grid: Mkt Cap / Vol 24H ----------------------------- */
@@ -157,8 +184,6 @@ body {
   font-size: 11px;
   font-weight: 500;
 }
-
-/* Sparkline -------------------------------------------------------------- */
 
 /* Sparkline -------------------------------------------------------------- */
 
