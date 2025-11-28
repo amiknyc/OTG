@@ -45,6 +45,17 @@ let sparkline5m = [];
 // Cache last rendered price string so we can animate price flips only on change.
 let lastPriceStr = null;
 
+// Local 5-minute sparkline history (per session)
+const SPARKLINE_MAX_POINTS = 12;
+let sparkline5m = [];
+
+// Cache last rendered price string so we can animate price flips only on change.
+let lastPriceStr = null;
+
+// Track SALE animation window (per event)
+const SALE_ANIMATION_MS = 20000; // 20 seconds
+const saleAnimationState = new Map(); // eventKey -> endTimeMs
+
 // ==== CORE BOOTSTRAP ====
 
 async function initOverlay() {
@@ -111,8 +122,7 @@ async function renderEvents(events) {
 
   const events24h = (events || []).filter((ev) => {
     const tsRaw = ev.event_timestamp || ev.closing_date;
-    const ts = toUnixSeconds(tsRaw);
-    return typeof ts === "number" && ts >= cutoff24h;
+    return typeof tsRaw === "number" && tsRaw >= cutoff24h;
   });
 
   const sessionHighEvent = getMaxEventByPrice(events24h);
@@ -138,7 +148,8 @@ async function renderEvents(events) {
     return;
   }
 
-  // Events list
+  const nowMs = Date.now();
+
   for (const ev of slice) {
     const li = document.createElement("li");
 
@@ -152,7 +163,7 @@ async function renderEvents(events) {
     const priceStr = paymentInfo.str;
 
     const tsRaw = ev.event_timestamp || ev.closing_date;
-    const ts = toUnixSeconds(tsRaw);
+    const ts = typeof tsRaw === "number" ? tsRaw : toUnixSeconds(tsRaw);
     const dateStr = ts ? formatDateUnixSeconds(ts) : "";
     const timeStr = ts ? formatUnixSeconds(ts) : "";
 
@@ -162,55 +173,94 @@ async function renderEvents(events) {
       sellerStr && buyerStr ? `${sellerStr} → ${buyerStr}` : "";
 
     const thumbUrl = nft.display_image_url || nft.image_url || "";
+    const thumbHtml = thumbUrl
+      ? `<img class="thumb" src="${sanitize(thumbUrl)}" alt="${sanitize(
+          name
+        )}" />`
+      : `<div class="thumb thumb-placeholder"></div>`;
 
-    const type = ev.event_type || "sale";
+    // SALE animation window handling
+    const eventKey = getEventKey(ev);
+    let endTime = saleAnimationState.get(eventKey);
+    if (!endTime) {
+      endTime = nowMs + SALE_ANIMATION_MS;
+      saleAnimationState.set(eventKey, endTime);
+    }
+    const stillAnimating = nowMs < endTime;
+
+    const saleLabelClass = `sale-label${
+      stillAnimating ? " sale-animating" : ""
+    }`;
+
+    const priceClassBase = "sale-price";
+    const priceClass = stillAnimating
+      ? `${priceClassBase} sale-price-animating`
+      : `${priceClassBase} sale-price-final`;
+
+    const initialPriceText =
+      stillAnimating && priceStr ? "…" : priceStr || "";
 
     li.className = `rarity-${sanitize(rarityClass)}`;
 
     li.innerHTML = `
       <div class="event-card">
         <div class="thumb-wrapper">
-          ${
-            thumbUrl
-              ? `<img class="thumb" src="${sanitize(
-                  thumbUrl
-                )}" alt="${sanitize(name)}" />`
-              : `<div class="thumb thumb-placeholder"></div>`
-          }
+          ${thumbHtml}
         </div>
         <div class="event-main">
-          <div class="top-line">
-            <span class="name">${sanitize(name)}</span>
-            <span class="price">${sanitize(priceStr)}</span>
-          </div>
-          <div class="meta-lines">
-            <span class="type-line">
-              ${sanitize(type)}${
-      priceStr ? " • " + sanitize(priceStr) : ""
-    }
-            </span>
-            <span class="datetime-line">
-              ${
-                dateStr
-                  ? sanitize(dateStr)
-                  : ""
-              }${
-      timeStr ? (dateStr ? " • " : "") + sanitize(timeStr) : ""
-    }
-            </span>
+          <!-- Line 1: item name (+ optional rarity pill) -->
+          <div class="event-header">
+            <span class="item-name">${sanitize(name)}</span>
             ${
-              directionStr
-                ? `<span class="direction-line">${sanitize(
-                    directionStr
-                  )}</span>`
+              rarityInfo
+                ? `<span class="rarity-pill rarity-${sanitize(
+                    rarityClass
+                  )}">${sanitize(rarityInfo.label)}</span>`
                 : ""
             }
           </div>
+
+          <!-- Line 2: SALE + price (animated) -->
+          <div class="sale-line">
+            <span class="${saleLabelClass}">sale</span>
+            <span class="${priceClass}" data-final-price="${sanitize(
+              priceStr || ""
+            )}">
+              ${sanitize(initialPriceText)}
+            </span>
+          </div>
+
+          <!-- Line 3: date + time -->
+          <div class="datetime-line">
+            ${
+              dateStr
+                ? sanitize(dateStr)
+                : ""
+            }${
+      timeStr ? (dateStr ? " • " : "") + sanitize(timeStr) : ""
+    }
+          </div>
+
+          <!-- Line 4: direction -->
+          ${
+            directionStr
+              ? `<div class="direction-line">${sanitize(directionStr)}</div>`
+              : ""
+          }
         </div>
       </div>
     `;
 
     ul.appendChild(li);
+
+    // Kick off price "calculating" animation for new/active events
+    if (stillAnimating && priceStr) {
+      const priceSpan = li.querySelector(".sale-price");
+      if (priceSpan) {
+        const remainingMs = endTime - nowMs;
+        animateSalePrice(priceSpan, priceStr, remainingMs);
+      }
+    }
   }
 }
 
@@ -461,6 +511,73 @@ function renderSparkline(values, trendClass) {
       <path class="${cls}" d="${d.trim()}" pathLength="100" />
     </svg>
   `;
+}
+
+// Build a reasonably stable key per event so we can track its animation window
+function getEventKey(ev) {
+  const nft = ev?.nft || ev?.asset || {};
+  const id =
+    ev.id ||
+    ev.event_id ||
+    ev.order_hash ||
+    ev.transaction_hash ||
+    ev.tx_hash ||
+    "";
+  const contract =
+    nft.contract ||
+    nft.contract_address ||
+    nft.asset_contract_address ||
+    "";
+  const tokenId = nft.identifier || nft.token_id || "";
+  const ts =
+    ev.event_timestamp ||
+    ev.closing_date ||
+    ev.created_date ||
+    ev.occurred_at ||
+    "";
+  return [id, contract, tokenId, ts].filter(Boolean).join("|");
+}
+
+// Animate the sale price so it looks like it's "calculating" before settling
+function animateSalePrice(span, finalStr, maxMs) {
+  if (!span || !finalStr) return;
+
+  const match = finalStr.match(/([\d.,]+)/);
+  const baseNum = match ? parseFloat(match[1].replace(/,/g, "")) : null;
+  const decimals = match && match[1].includes(".")
+    ? match[1].split(".")[1].length
+    : 2;
+
+  const duration = Math.min(2000, Math.max(600, maxMs || 2000)); // 0.6–2s
+  const start = performance.now();
+
+  function frame(now) {
+    if (!span.isConnected) return;
+
+    const t = (now - start) / duration;
+    if (t >= 1 || baseNum == null) {
+      span.textContent = finalStr;
+      span.classList.remove("sale-price-animating");
+      span.classList.add("sale-price-final");
+      return;
+    }
+
+    // Generate a jittered interim price
+    const jitter = baseNum * (0.6 + Math.random() * 0.8);
+    const interim = jitter.toFixed(decimals);
+    if (match) {
+      span.textContent = finalStr.replace(match[1], interim);
+    } else {
+      span.textContent = finalStr;
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  span.classList.add("sale-price-animating");
+  span.classList.remove("sale-price-final");
+  span.textContent = "…";
+  requestAnimationFrame(frame);
 }
 
 // ==== PAYMENT / RARITY / FORMATTING HELPERS ====

@@ -48,9 +48,9 @@ body {
 }
 
 .subtitle {
-  font-size: 12px;
-  font-weight: 600;
-  color: #e5e7eb;
+  font-size: 14px;       /* match .title */
+  font-weight: 600;      /* match .title */
+  color: #f9fafb;        /* match .title */
 }
 
 /* Divider between token + marketplace sections --------------------------- */
@@ -94,7 +94,6 @@ body {
   position: relative;
   z-index: 1;
 }
-
 
 /* Metrics block */
 
@@ -403,6 +402,117 @@ body {
 .rarity-other .rarity-pill {
   background: rgba(75, 85, 99, 0.3);
   color: #e5e7eb;
+}
+
+/* Marketplace event layout ------------------------------------------------ */
+
+.event-card {
+  display: flex;
+  gap: 8px;
+}
+
+.thumb-wrapper {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.thumb-placeholder {
+  background: rgba(31, 41, 55, 0.8);
+}
+
+.event-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Line 1: item name */
+.item-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Line 2: SALE + price */
+.sale-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.sale-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #22c55e;
+}
+
+/* Blink "sale" label for new events: 1s cycle x 20 = ~20s total */
+.sale-label.sale-animating {
+  animation: sale-blink 1s step-start 20;
+}
+
+@keyframes sale-blink {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  40.01%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+/* Price text */
+.sale-price {
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+/* While "calculating" */
+.sale-price.sale-price-animating {
+  color: #9ca3af;
+}
+
+/* Final static green price */
+.sale-price.sale-price-final {
+  color: #22c55e;
+}
+
+/* Line 3: date + time (you already had similar styles) */
+.datetime-line {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Line 4: direction – keep your existing palette but ensure it's set */
+.direction-line {
+  font-size: 11px;
+  color: #d1d5db;
 }
 
 /* Error line ------------------------------------------------------------- */
