@@ -78,7 +78,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("assets/gunz.webp");
+  background-image: url("assets/gunzilla-gunz.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
