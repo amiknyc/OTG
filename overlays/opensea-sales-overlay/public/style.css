@@ -179,19 +179,33 @@ body {
 
 /* Sparkline -------------------------------------------------------------- */
 
+/* Sparkline -------------------------------------------------------------- */
+
 #gun-sparkline {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  gap: 12px;              /* more breathing room between charts */
+  margin-top: 4px;
+}
+
+.sparkline-block {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
+}
+
+.sparkline-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #9ca3af;
+}
+
+.sparkline-chart {
   height: 32px;
 }
 
-#gun-sparkline > div {
-  width: 100%;
-  height: 100%;
-}
-
-#gun-sparkline svg {
+.sparkline-chart svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -207,12 +221,12 @@ body {
   animation: spark-draw 1s ease-out forwards;
 }
 
-/* Positive 24H trend = green */
+/* Positive 24H / live trend = green */
 .sparkline-path.positive {
   stroke: #4dd9b3;
 }
 
-/* Negative 24H trend = fuchsia/red */
+/* Negative trend = fuchsia/red */
 .sparkline-path.negative {
   stroke: #eb15ae;
 }

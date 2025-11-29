@@ -466,22 +466,18 @@ function renderGunMetrics() {
     series24h = sparkline7d.slice(len - windowSize);
   }
 
-  // ---- Live 5-minute sparkline (left) with fallback to 24H ----
+
+  // ---- Live 5-minute sparkline (left) – no 24H fallback ----
   if (liveEl) {
     const now = Date.now();
     const isFresh = now - lastMetricsUpdateMs < 5000; // blink end for 5s
 
     if (liveSpark.length >= 2) {
-      // Use true live series once we have enough points
       liveEl.innerHTML = renderSparkline(liveSpark, trendClass, {
         showEndDot: isFresh
       });
-    } else if (series24h.length >= 2) {
-      // Before we have 2 live points, fall back to 24H view
-      liveEl.innerHTML = renderSparkline(series24h, trendClass, {
-        showEndDot: false
-      });
     } else {
+      // Not enough live data yet – show nothing under the "Live (5m updates)" label
       liveEl.innerHTML = "";
     }
   }
