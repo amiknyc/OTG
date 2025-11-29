@@ -95,13 +95,13 @@ body {
   z-index: 1;
 }
 
-/* OpenSea / Marketplace section with independent background */
+/* OpenSea / Marketplace section container */
 #opensea-section {
   position: relative;
-  margin-top: 4px;          /* keeps it close to the subtitle */
-  padding: 6px 8px;
+  margin-top: 4px;
+  padding: 8px;
   border-radius: 10px;
-  overflow: hidden;         /* clip the background to rounded corners */
+  overflow: hidden; /* clip the animated background */
 }
 
 /* Fluid mesh / curtain background for OpenSea */
@@ -109,22 +109,28 @@ body {
   content: "";
   position: absolute;
   inset: 0;
+
   background:
-    radial-gradient(circle at 0% 0%, rgba(0, 255, 255, 0.18), transparent 55%),
-    radial-gradient(circle at 100% 0%, rgba(255, 0, 255, 0.20), transparent 55%),
-    radial-gradient(circle at 0% 100%, rgba(0, 160, 255, 0.18), transparent 55%),
-    radial-gradient(circle at 100% 100%, rgba(120, 0, 255, 0.18), transparent 55%);
+    radial-gradient(circle at 0% 0%, rgba(0, 255, 255, 0.45), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(255, 0, 255, 0.45), transparent 55%),
+    radial-gradient(circle at 0% 100%, rgba(0, 160, 255, 0.45), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(120, 0, 255, 0.45), transparent 55%);
   background-size: 140% 140%;
   background-repeat: no-repeat;
 
-  /* “curtain” look */
-  filter: blur(14px);
-  opacity: 0.25;           /* reduce if it’s too strong */
+  filter: blur(18px);
+  opacity: 0.6;  /* cranked up so you can *definitely* see it */
 
-  animation: openseaMeshFlow 18s ease-in-out infinite alternate;
+  animation: openseaMeshFlow 16s ease-in-out infinite alternate;
 
   pointer-events: none;
   z-index: 0;
+}
+
+/* Make sure real content is above the mesh */
+#opensea-section > * {
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes openseaMeshFlow {
@@ -149,12 +155,6 @@ body {
       10% 100%,
       90% 80%;
   }
-}
-
-/* Make sure OpenSea content sits above the background image */
-#opensea-section > * {
-  position: relative;
-  z-index: 1;
 }
 
 /* Metrics block */
