@@ -44,7 +44,7 @@ body {
 
 .subheader {
   margin-top: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 18px;
 }
 
 .subtitle {
@@ -56,7 +56,7 @@ body {
 /* Divider between token + marketplace sections --------------------------- */
 
 .section-divider {
-  margin: 8px 0 6px 0;
+  margin: 20px 0 20px 0;
   border-top: 1px solid rgba(55, 65, 81, 0.85);
 }
 
@@ -191,7 +191,7 @@ body {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 20px;
 }
 
 .sparkline-label {
@@ -199,6 +199,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #9ca3af;
+  padding-top: 6px;
 }
 
 .sparkline-chart {
@@ -207,9 +208,16 @@ body {
   box-sizing: border-box;
 }
 
+.sparkline-stat {
+  font-size: 10px;
+  color: #d1d5db;
+  margin-top: 2px;
+  opacity: 0.9;
+}
+
 .sparkline-chart svg {
-  width: 100%;
-  height: 100%;
+  width: 80%;
+  height: 120%;
   display: block;
 }
 
@@ -231,6 +239,26 @@ body {
 /* Negative trend = fuchsia/red */
 .sparkline-path.negative {
   stroke: #eb15ae;
+}
+
+/* 24H area + zero baseline ---------------------------------------------- */
+
+.sparkline-area {
+  fill: rgba(107, 114, 128, 0.22); /* neutral fallback */
+  stroke: none;
+}
+
+.sparkline-area.positive {
+  fill: rgba(77, 217, 179, 0.18); /* soft green */
+}
+
+.sparkline-area.negative {
+  fill: rgba(235, 21, 174, 0.18); /* soft fuchsia */
+}
+
+.sparkline-zero-line {
+  stroke: rgba(148, 163, 184, 0.85);
+  stroke-width: 0.6;
 }
 
 /* End dot for live sparkline */

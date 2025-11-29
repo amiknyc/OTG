@@ -401,13 +401,8 @@ function renderGunMetrics() {
   const { priceUsd, marketCapUsd, vol1dUsd, change4hPct, sparkline7d } =
     gunMetrics;
 
-  const priceStr =
-    priceUsd != null
-      ? priceUsd < 1
-        ? `$${priceUsd.toFixed(4)}`
-        : `$${priceUsd.toFixed(3)}`
-      : "—";
-
+  // Main token metrics ----------------------------------------------------
+  const priceStr = formatGunPrice(priceUsd);
   const capStr = formatUsdShort(marketCapUsd);
   const volStr = formatUsdShort(vol1dUsd);
   const changeStr = formatPct(change4hPct);
@@ -458,16 +453,82 @@ function renderGunMetrics() {
     </div>
   `;
 
-  // ---- Build 24H series once so both charts can reuse it ----
+  // ---- Build 24H series (price) + normalized % version ------------------
   let series24h = [];
+  let series24hPct = [];
+  let delta24hPct = null;
+  let high24h = null;
+  let low24h = null;
+
   if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
     const len = sparkline7d.length;
     const windowSize = Math.max(2, Math.floor(len / 7)); // ≈ last 24h
-    series24h = sparkline7d.slice(len - windowSize);
+    const sliced = sparkline7d.slice(len - windowSize);
+    series24h = sliced.filter(
+      (v) => typeof v === "number" && !Number.isNaN(v)
+    );
+
+    if (series24h.length >= 2) {
+      const open = series24h[0];
+      const close = series24h[series24h.length - 1];
+
+      if (
+        typeof open === "number" &&
+        typeof close === "number" &&
+        !Number.isNaN(open) &&
+        !Number.isNaN(close) &&
+        open !== 0
+      ) {
+        delta24hPct = ((close / open) - 1) * 100;
+      }
+
+      high24h = Math.max(...series24h);
+      low24h = Math.min(...series24h);
+
+      if (open && !Number.isNaN(open) && open !== 0) {
+        series24hPct = series24h.map((v) => ((v / open) - 1) * 100);
+      }
+    }
   }
 
+  // ---- 1H change from liveSpark (~12 last points) -----------------------
+  let delta1hPct = null;
+  const ONE_H_POINTS = 12;
 
-  // ---- Live 5-minute sparkline (left) – no 24H fallback ----
+  if (liveSpark.length >= 2) {
+    const slice1h =
+      liveSpark.length > ONE_H_POINTS
+        ? liveSpark.slice(liveSpark.length - ONE_H_POINTS)
+        : liveSpark.slice();
+
+    const first = slice1h[0];
+    const last = slice1h[slice1h.length - 1];
+
+    if (
+      typeof first === "number" &&
+      typeof last === "number" &&
+      !Number.isNaN(first) &&
+      !Number.isNaN(last) &&
+      first !== 0
+    ) {
+      delta1hPct = ((last / first) - 1) * 100;
+    }
+  }
+
+  const delta1hStr =
+    delta1hPct == null ? "Δ1H: —" : `Δ1H: ${formatPct(delta1hPct)}`;
+  const delta24hStatStr =
+    delta24hPct == null ? "Δ24H: —" : `Δ24H: ${formatPct(delta24hPct)}`;
+
+  const highStr = high24h == null ? "—" : formatGunPrice(high24h);
+  const lowStr = low24h == null ? "—" : formatGunPrice(low24h);
+
+  const stat24hParts = [delta24hStatStr];
+  if (highStr !== "—") stat24hParts.push(`High: ${highStr}`);
+  if (lowStr !== "—") stat24hParts.push(`Low: ${lowStr}`);
+  const stat24hText = stat24hParts.join("  •  ");
+
+  // ---- Live 5-minute sparkline (left) – raw price -----------------------
   if (liveEl) {
     const now = Date.now();
     const isFresh = now - lastMetricsUpdateMs < 5000; // blink end for 5s
@@ -477,16 +538,19 @@ function renderGunMetrics() {
         showEndDot: isFresh
       });
     } else {
-      // Not enough live data yet – show nothing under the "Live (5m updates)" label
+      // Not enough live data yet – no fallback
       liveEl.innerHTML = "";
     }
   }
 
-  // ---- 24H sparkline (right) ----
+  // ---- 24H sparkline (right) – normalized % area + zero baseline --------
   if (spark24El) {
-    if (series24h.length >= 2) {
-      spark24El.innerHTML = renderSparkline(series24h, trendClass, {
-        showEndDot: false
+    if (series24hPct.length >= 2) {
+      spark24El.innerHTML = renderSparkline(series24hPct, trendClass, {
+        showEndDot: false,
+        asArea: true,
+        showZeroLine: true,
+        isPercent: true
       });
     } else {
       spark24El.innerHTML = "";
@@ -495,22 +559,52 @@ function renderGunMetrics() {
     sparkContainer &&
     !document.getElementById("gun-sparkline-live")
   ) {
-    // Fallback: single sparkline container – render 24H view only
-    if (series24h.length >= 2) {
-      sparkContainer.innerHTML = renderSparkline(series24h, trendClass, {
-        showEndDot: false
+    // Fallback: single sparkline container – render 24H % view only
+    if (series24hPct.length >= 2) {
+      sparkContainer.innerHTML = renderSparkline(series24hPct, trendClass, {
+        showEndDot: false,
+        asArea: true,
+        showZeroLine: true,
+        isPercent: true
       });
     } else {
       sparkContainer.innerHTML = "";
     }
   }
+
+  // ---- Stat lines under each sparkline label ----------------------------
+  if (liveEl && liveEl.parentElement) {
+    let liveStatEl = document.getElementById("gun-sparkline-live-stat");
+    if (!liveStatEl) {
+      liveStatEl = document.createElement("div");
+      liveStatEl.id = "gun-sparkline-live-stat";
+      liveStatEl.className = "sparkline-stat";
+      liveEl.parentElement.appendChild(liveStatEl);
+    }
+    liveStatEl.textContent = delta1hStr;
+  }
+
+  if (spark24El && spark24El.parentElement) {
+    let stat24El = document.getElementById("gun-sparkline-24h-stat");
+    if (!stat24El) {
+      stat24El = document.createElement("div");
+      stat24El.id = "gun-sparkline-24h-stat";
+      stat24El.className = "sparkline-stat";
+      spark24El.parentElement.appendChild(stat24El);
+    }
+    stat24El.textContent = stat24hText;
+  }
 }
 
+
 function renderSparkline(values, trendClass, opts = {}) {
-  const width = 140;
-  const height = 32;
-  const margin = 2;
+  const width = opts.width || 140;
+  const height = opts.height || 32;
+  const marginX = opts.marginX ?? 2;
+  const marginY = opts.marginY ?? 2;
   const showEndDot = opts.showEndDot === true;
+  const asArea = opts.asArea === true;
+  const showZeroLine = opts.showZeroLine === true;
 
   const filtered = values.filter(
     (v) => typeof v === "number" && !Number.isNaN(v)
@@ -521,40 +615,79 @@ function renderSparkline(values, trendClass, opts = {}) {
   const max = Math.max(...filtered);
   const range = max - min || 1;
 
-  const stepX = (width - margin * 2) / (filtered.length - 1);
-  const innerHeight = height - margin * 2;
+  const stepX = (width - marginX * 2) / (filtered.length - 1);
+  const innerHeight = height - marginY * 2;
 
-  let d = "";
-  let lastX = null;
-  let lastY = null;
-
+  const points = [];
   filtered.forEach((v, i) => {
-    const x = margin + i * stepX;
+    const x = marginX + i * stepX;
     const norm = (v - min) / range;
-    const y = height - margin - norm * innerHeight;
-    d += (i === 0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
-    if (i === filtered.length - 1) {
-      lastX = x;
-      lastY = y;
-    }
+    const y = height - marginY - norm * innerHeight;
+    points.push({ x, y });
   });
 
-  const cls = trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
+  let d = "";
+  points.forEach((pt, i) => {
+    d += (i === 0 ? "M" : "L") + pt.x.toFixed(2) + " " + pt.y.toFixed(2) + " ";
+  });
+
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  // Optional area fill under the curve
+  let dArea = "";
+  if (asArea && first && last) {
+    const bottomY = (height - marginY).toFixed(2);
+    dArea = `M ${first.x.toFixed(2)} ${bottomY} `;
+    points.forEach((pt) => {
+      dArea += `L ${pt.x.toFixed(2)} ${pt.y.toFixed(2)} `;
+    });
+    dArea += `L ${last.x.toFixed(2)} ${bottomY} Z`;
+  }
+
+  const baseLineClass =
+    trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
+  const areaClass =
+    trendClass ? `sparkline-area ${trendClass}` : "sparkline-area";
 
   const endDot =
-    showEndDot && lastX != null && lastY != null
-      ? `<circle class="sparkline-end-dot" cx="${lastX.toFixed(
+    showEndDot && last
+      ? `<circle class="sparkline-end-dot" cx="${last.x.toFixed(
           2
-        )}" cy="${lastY.toFixed(2)}" r="1.8" />`
+        )}" cy="${last.y.toFixed(2)}" r="1.8" />`
       : "";
+
+  // Zero baseline (for normalized 24H % view)
+  let zeroLineSvg = "";
+  if (showZeroLine) {
+    const zeroNorm = (0 - min) / range;
+    let yZero = height - marginY - zeroNorm * innerHeight;
+    // Clamp inside chart bounds so it's always visible
+    if (yZero < marginY) yZero = marginY;
+    if (yZero > height - marginY) yZero = height - marginY;
+
+    zeroLineSvg = `<line class="sparkline-zero-line"
+      x1="${marginX.toFixed(2)}"
+      y1="${yZero.toFixed(2)}"
+      x2="${(width - marginX).toFixed(2)}"
+      y2="${yZero.toFixed(2)}"
+    />`;
+  }
 
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <path class="${cls}" d="${d.trim()}" pathLength="100" />
+      ${
+        asArea && dArea
+          ? `<path class="${areaClass}" d="${dArea.trim()}" />`
+          : ""
+      }
+      <path class="${baseLineClass}" d="${d.trim()}" pathLength="100" />
+      ${zeroLineSvg}
       ${endDot}
     </svg>
   `;
 }
+
 
 // ==== SALE KEY + PRICE ANIMATION HELPERS ====
 
@@ -793,6 +926,11 @@ function getOrdinalSuffix(n) {
     default:
       return "th";
   }
+}
+
+function formatGunPrice(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  return n < 1 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
 }
 
 function formatUsdShort(n) {
