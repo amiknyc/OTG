@@ -90,7 +90,9 @@ body {
 }
 
 /* <------ START OPENSEA SECTION ------> */
-/* Background image layer */
+/* === OpenSea 3D Ocean Grid Background === */
+
+/* Container */
 #opensea-section {
   position: relative;
   margin-top: 4px;
@@ -99,101 +101,117 @@ body {
   overflow: hidden;
 }
 
-/* 1) Fluid colored mesh "cloth" */
+/* 1) Deep "ocean from above" glow */
+
 #opensea-section::before {
   content: "";
   position: absolute;
   inset: 0;
 
   background:
-    radial-gradient(circle at 0% 0%,   rgba(0, 255, 255, 0.40), transparent 55%),
-    radial-gradient(circle at 100% 0%, rgba(255, 0, 255, 0.40), transparent 55%),
-    radial-gradient(circle at 0% 100%, rgba(0, 160, 255, 0.40), transparent 55%),
-    radial-gradient(circle at 100% 100%,rgba(120, 0, 255, 0.40), transparent 55%);
+    radial-gradient(circle at 50% 120%, rgba(0, 200, 255, 0.55), transparent 65%),
+    radial-gradient(circle at 10% 10%,   rgba(0, 255, 255, 0.25), transparent 55%),
+    radial-gradient(circle at 90% 0%,    rgba(160, 0, 255, 0.25), transparent 55%),
+    linear-gradient(to bottom, rgba(2, 8, 23, 0.9), rgba(2, 6, 23, 1));
   background-size: 140% 140%;
   background-repeat: no-repeat;
 
-  filter: blur(18px);
-  opacity: 0.45;
+  filter: blur(10px);
+  opacity: 0.7;
 
-  animation: openseaMeshFlow 20s ease-in-out infinite alternate;
+  animation: openseaOceanGlow 26s ease-in-out infinite alternate;
 
   pointer-events: none;
   z-index: 0;
 }
 
-/* 2) Colored grid lines over the mesh */
+/* 2) Perspective "3D" grid like a wavy surface */
 #opensea-section::after {
   content: "";
   position: absolute;
-  inset: 0;
 
-  /* horizontal + vertical grid */
+  /* large plane, tilted away from viewer */
+  left: -25%;
+  right: -25%;
+  bottom: -60%;
+  top: 20%;
+
   background-image:
     repeating-linear-gradient(
       to right,
-      rgba(0, 255, 255, 0.35) 0px,
-      rgba(0, 255, 255, 0.35) 1px,
+      rgba(0, 255, 255, 0.45) 0px,
+      rgba(0, 255, 255, 0.45) 1px,
       transparent 1px,
-      transparent 14px
+      transparent 18px
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(180, 0, 255, 0.35) 0px,
-      rgba(180, 0, 255, 0.35) 1px,
+      rgba(0, 180, 255, 0.45) 0px,
+      rgba(0, 180, 255, 0.45) 1px,
       transparent 1px,
-      transparent 14px
+      transparent 18px
     );
+  background-size: 160% 160%;
+  background-position: 0% 0%, 0% 0%;
 
-  background-size: 120% 120%;
-  mix-blend-mode: screen;   /* grid picks up the color underneath */
-  opacity: 0.35;
+  /* fake 3D */
+  transform-origin: top center;
+  transform: perspective(900px) rotateX(70deg) scale(1.25);
+  filter: blur(1px);
 
-  animation: openseaGridDrift 26s linear infinite alternate;
+  /* fade toward the top/distance */
+  box-shadow: 0 -60px 120px rgba(2, 6, 23, 0.95) inset;
+
+  opacity: 0.55;
+  mix-blend-mode: screen;
+
+  animation: openseaOceanGrid 22s ease-in-out infinite alternate;
 
   pointer-events: none;
   z-index: 1;
 }
 
-/* Make real content sit above both layers */
+/* Ensure content sits above both layers */
 #opensea-section > * {
   position: relative;
   z-index: 2;
 }
 
-@keyframes openseaMeshFlow {
+/* === Animations === */
+
+@keyframes openseaOceanGlow {
   0% {
     background-position:
-      0% 0%,
-      100% 0%,
-      0% 100%,
-      100% 100%;
+      50% 120%,
+      10% 10%,
+      90% 0%,
+      0% 0%;
   }
   50% {
     background-position:
-      20% 10%,
-      80% 0%,
-      0% 90%,
-      100% 80%;
+      55% 110%,
+      20% 0%,
+      80% 10%,
+      0% 20%;
   }
   100% {
     background-position:
+      45% 125%,
       0% 20%,
-      100% 10%,
-      10% 100%,
-      90% 80%;
+      100% 0%,
+      0% 0%;
   }
 }
 
-@keyframes openseaGridDrift {
+@keyframes openseaOceanGrid {
   0% {
     background-position: 0% 0%, 0% 0%;
   }
   50% {
-    background-position: 15% 0%, 0% 20%;
+    background-position: 12% 8%, -6% 18%;
   }
   100% {
-    background-position: 30% -10%, -10% 40%;
+    background-position: 25% -4%, -12% 30%;
   }
 }
 
