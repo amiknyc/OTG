@@ -95,6 +95,68 @@ body {
   z-index: 1;
 }
 
+/* OpenSea / Marketplace section with independent background */
+#opensea-section {
+  position: relative;
+  margin-top: 4px;          /* keeps it close to the subtitle */
+  padding: 6px 8px;
+  border-radius: 10px;
+  overflow: hidden;         /* clip the background to rounded corners */
+}
+
+/* Fluid mesh / curtain background for OpenSea */
+#opensea-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(0, 255, 255, 0.18), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(255, 0, 255, 0.20), transparent 55%),
+    radial-gradient(circle at 0% 100%, rgba(0, 160, 255, 0.18), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(120, 0, 255, 0.18), transparent 55%);
+  background-size: 140% 140%;
+  background-repeat: no-repeat;
+
+  /* “curtain” look */
+  filter: blur(14px);
+  opacity: 0.25;           /* reduce if it’s too strong */
+
+  animation: openseaMeshFlow 18s ease-in-out infinite alternate;
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes openseaMeshFlow {
+  0% {
+    background-position:
+      0% 0%,
+      100% 0%,
+      0% 100%,
+      100% 100%;
+  }
+  50% {
+    background-position:
+      20% 10%,
+      80% 0%,
+      0% 90%,
+      100% 80%;
+  }
+  100% {
+    background-position:
+      0% 20%,
+      100% 10%,
+      10% 100%,
+      90% 80%;
+  }
+}
+
+/* Make sure OpenSea content sits above the background image */
+#opensea-section > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Metrics block */
 
 #gun-price {
@@ -144,6 +206,8 @@ body {
     opacity: 1;
   }
 }
+
+
 
 .gun-change {
   font-size: 11px;

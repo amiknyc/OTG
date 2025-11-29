@@ -5,7 +5,7 @@ const COLLECTION_SLUG = "off-the-grid";
 
 // Polling / display
 const POLL_INTERVAL_MS = 60000; // 60 seconds for marketplace
-const MAX_ITEMS = 10;
+const MAX_ITEMS = 5;
 
 // Backend routes (proxied by your Vercel / API layer)
 const API_PATH = "/api/opensea-sales.js";
