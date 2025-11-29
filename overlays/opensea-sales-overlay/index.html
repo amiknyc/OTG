@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -14,20 +14,20 @@
       </div>
 
       <div id="gun-token-section">
-  <div id="gun-price"></div>
+        <div id="gun-price"></div>
 
-  <div id="gun-sparkline">
-    <div class="sparkline-block">
-      <div class="sparkline-label">Live (5m updates)</div>
-      <div id="gun-sparkline-live" class="sparkline-chart"></div>
-    </div>
+        <div id="gun-sparkline">
+          <div class="sparkline-block">
+            <div class="sparkline-label">Live (5m updates)</div>
+            <div id="gun-sparkline-live" class="sparkline-chart"></div>
+          </div>
 
-    <div class="sparkline-block">
-      <div class="sparkline-label">Last 24H</div>
-      <div id="gun-sparkline-24h" class="sparkline-chart"></div>
-    </div>
-  </div>
-</div>
+          <div class="sparkline-block">
+            <div class="sparkline-label">Last 24H</div>
+            <div id="gun-sparkline-24h" class="sparkline-chart"></div>
+          </div>
+        </div>
+      </div>
 
       <div class="section-divider"></div>
 
@@ -38,12 +38,15 @@
 
       <!-- New wrapper for OpenSea / marketplace so it can have its own background -->
       <section id="opensea-section">
+        <!-- New: fluid mesh canvas, sits behind all content -->
+        <canvas id="opensea-mesh-canvas"></canvas>
+
         <div id="high-sale"></div>
         <ul id="events"></ul>
         <div id="error"></div>
       </section>
     </div>
-    
+
     <!-- IMPORTANT: script.js must live in the same folder as index.html -->
     <script src="public/script.js"></script>
   </body>
