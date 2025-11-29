@@ -183,7 +183,7 @@ body {
 
 #gun-sparkline {
   display: flex;
-  gap: 12px;              /* more breathing room between charts */
+  gap: 18px;              /* more breathing room between charts */
   margin-top: 4px;
 }
 
@@ -203,6 +203,8 @@ body {
 
 .sparkline-chart {
   height: 32px;
+  padding: 0 8px;      /* compress from left/right */
+  box-sizing: border-box;
 }
 
 .sparkline-chart svg {
