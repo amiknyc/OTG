@@ -458,28 +458,36 @@ function renderGunMetrics() {
     </div>
   `;
 
-  // Live 5-minute sparkline (left)
+  // ---- Build 24H series once so both charts can reuse it ----
+  let series24h = [];
+  if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
+    const len = sparkline7d.length;
+    const windowSize = Math.max(2, Math.floor(len / 7)); // ≈ last 24h
+    series24h = sparkline7d.slice(len - windowSize);
+  }
+
+  // ---- Live 5-minute sparkline (left) with fallback to 24H ----
   if (liveEl) {
+    const now = Date.now();
+    const isFresh = now - lastMetricsUpdateMs < 5000; // blink end for 5s
+
     if (liveSpark.length >= 2) {
-      const now = Date.now();
-      const isFresh = now - lastMetricsUpdateMs < 5000; // blink end for 5s
+      // Use true live series once we have enough points
       liveEl.innerHTML = renderSparkline(liveSpark, trendClass, {
         showEndDot: isFresh
+      });
+    } else if (series24h.length >= 2) {
+      // Before we have 2 live points, fall back to 24H view
+      liveEl.innerHTML = renderSparkline(series24h, trendClass, {
+        showEndDot: false
       });
     } else {
       liveEl.innerHTML = "";
     }
   }
 
-  // 24H sparkline (right) derived from 7D series
+  // ---- 24H sparkline (right) ----
   if (spark24El) {
-    let series24h = [];
-    if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
-      const len = sparkline7d.length;
-      const windowSize = Math.max(2, Math.floor(len / 7)); // ≈ last 24h
-      series24h = sparkline7d.slice(len - windowSize);
-    }
-
     if (series24h.length >= 2) {
       spark24El.innerHTML = renderSparkline(series24h, trendClass, {
         showEndDot: false
@@ -487,12 +495,12 @@ function renderGunMetrics() {
     } else {
       spark24El.innerHTML = "";
     }
-  } else if (sparkContainer && !document.getElementById("gun-sparkline-live")) {
+  } else if (
+    sparkContainer &&
+    !document.getElementById("gun-sparkline-live")
+  ) {
     // Fallback: single sparkline container – render 24H view only
-    if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
-      const len = sparkline7d.length;
-      const windowSize = Math.max(2, Math.floor(len / 7));
-      const series24h = sparkline7d.slice(len - windowSize);
+    if (series24h.length >= 2) {
       sparkContainer.innerHTML = renderSparkline(series24h, trendClass, {
         showEndDot: false
       });
