@@ -214,6 +214,9 @@ body {
   margin-top: 2px;
   opacity: 0.9;
 }
+.sparkline-stat-line {
+  line-height: 1.1;
+}
 
 .sparkline-chart svg {
   width: 80%;

@@ -523,10 +523,15 @@ function renderGunMetrics() {
   const highStr = high24h == null ? "—" : formatGunPrice(high24h);
   const lowStr = low24h == null ? "—" : formatGunPrice(low24h);
 
-  const stat24hParts = [delta24hStatStr];
-  if (highStr !== "—") stat24hParts.push(`High: ${highStr}`);
-  if (lowStr !== "—") stat24hParts.push(`Low: ${lowStr}`);
-  const stat24hText = stat24hParts.join("  •  ");
+  const stat24hLines = [delta24hStatStr];
+
+  if (highStr !== "—") stat24hLines.push(`High: ${highStr}`);
+  if (lowStr !== "—") stat24hLines.push(`Low: ${lowStr}`);
+
+  const stat24hHtml = stat24hLines
+    .map((line) => `<div class="sparkline-stat-line">${line}</div>`)
+    .join("");
+
 
   // ---- Live 5-minute sparkline (left) – raw price -----------------------
   if (liveEl) {
@@ -592,7 +597,7 @@ function renderGunMetrics() {
       stat24El.className = "sparkline-stat";
       spark24El.parentElement.appendChild(stat24El);
     }
-    stat24El.textContent = stat24hText;
+    stat24El.innerHTML = stat24hHtml;
   }
 }
 
