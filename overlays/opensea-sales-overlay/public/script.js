@@ -115,12 +115,11 @@ function initOpenSeaMesh() {
     const t = timestamp / 1000; // seconds
     ctx.clearRect(0, 0, width, height);
 
-    // gradient stroke for depth/color
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.95)"); // cyan
-    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.95)"); // fuchsia
+    // 1) Draw the mesh in solid white on a transparent canvas
+    ctx.save();
     ctx.lineWidth = 1;
-    ctx.strokeStyle = gradient;
+    ctx.strokeStyle = "rgba(255, 255, 255, 1)";
+    ctx.globalCompositeOperation = "source-over";
 
     // horizontal lines
     for (let iy = 0; iy < ROWS; iy++) {
@@ -143,6 +142,21 @@ function initOpenSeaMesh() {
       }
       ctx.stroke();
     }
+    ctx.restore();
+
+    // 2) Apply a gradient only *inside* the stroked pixels (mask)
+    ctx.save();
+    ctx.globalCompositeOperation = "source-in"; // keep only where lines exist
+
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.95)");  // cyan
+    gradient.addColorStop(0.5, "rgba(129, 140, 248, 0.95)"); // indigo
+    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.95)");  // fuchsia
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.restore();
 
     requestAnimationFrame(draw);
   }

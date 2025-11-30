@@ -110,8 +110,8 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 0.15;             /* dial this down if it’s too strong */
-  mix-blend-mode: screen;    /* lets the grid “glow” into the background */
+  opacity: 1;              /* full opacity – we’ll manage alpha in JS */
+  mix-blend-mode: normal;  /* let transparency behave like a proper mask */
   pointer-events: none;
 }
 
