@@ -25,9 +25,7 @@ body {
     radial-gradient(circle at top, #111827 0%, #020617 45%, #000000 100%);
   color: #e5e7eb;
 
-  /* Global font */
-  font-family: "Kode Mono", system-ui, -apple-system, BlinkMacSystemFont,
-               "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  font-family: "Kode Mono", monospace;
 
   position: relative;
 }
@@ -90,7 +88,9 @@ body::before {
 
 /* typography */
 .body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Kode Mono", monospace;
   color: var(--text-primary);
-  background: var(--bg-main);
+  /* Do NOT override the global gradient background */
+  background: transparent;
 }
+
