@@ -18,9 +18,14 @@ body {
 /* Global typography for this page */
 body {
   font-family: "Kode Mono", monospace;
-  background: transparent; /* let the global dark/static bg from base.css show */
+  background: transparent;
   color: #e5e7eb;
-  line-height: 1.4;
+  line-height: 1.45;
+
+  /* Try to make mono text crisper */
+  -webkit-font-smoothing: subpixel-antialiased; /* Safari / Chrome on macOS */
+  text-rendering: geometricPrecision;           /* Hint for better edge sharpness */
+  font-weight: 500;                             /* slightly heavier than 400 */
 }
 
 /* ===== Outer overlay container ===== */
