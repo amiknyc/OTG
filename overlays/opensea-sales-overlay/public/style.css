@@ -108,7 +108,7 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 0.85;             /* dial this down if it’s too strong */
+  opacity: 0.15;             /* dial this down if it’s too strong */
   mix-blend-mode: screen;    /* lets the grid “glow” into the background */
   pointer-events: none;
 }
