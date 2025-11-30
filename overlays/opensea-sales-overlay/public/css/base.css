@@ -24,9 +24,21 @@ body {
   background:
     radial-gradient(circle at top, #111827 0%, #020617 45%, #000000 100%);
   color: #e5e7eb;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-               "Inter", "Segoe UI", sans-serif;
-  position: relative; /* needed for ::before overlay */
+
+  /* Global font */
+  font-family: "Kode Mono", system-ui, -apple-system, BlinkMacSystemFont,
+               "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+
+  position: relative;
+}
+
+/* Brand / header logo: "cryptohaki" */
+.cryptohaki-logo {
+  font-family: "Major Mono Display", monospace;
+  font-size: 1.6rem;           /* tweak to taste */
+  letter-spacing: 0.25em;      /* gives that spaced-out logo feel */
+  text-transform: lowercase;   /* keeps it in that minimal style */
+  line-height: 1;
 }
 
 /* Static “grain” overlay */
