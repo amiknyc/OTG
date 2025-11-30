@@ -14,7 +14,44 @@ const GUN_METRICS_URL = "/api/coingecko-gun-metrics.js";
 // Time constants for sales
 const DAY_SECONDS = 24 * 60 * 60;
 
+// Hard-coded all-time high for this collection.
+const ALL_TIME_HIGH = {
+  amount: 250000.0,
+  symbol: "GUN",
+  name: "APE-FOOL'S GOLD MASK",
+  timestamp: 1764263173,
+  thumbUrl:
+    "https://i2c.seadn.io/gunzilla/0x9ed98e159be43a8d42b64053831fcae5e4d7d271/632fcd41d3343ffee3bc0d14057449/77632fcd41d3343ffee3bc0d14057449.png?w=1000"
+};
+
+// Cache rarity per NFT to avoid refetching metadata
+const rarityCache = new Map();
+
+// GUN metrics state
+let gunMetrics = {
+  priceUsd: null,
+  marketCapUsd: null,
+  vol1dUsd: null,
+  marketCap1dUsd: null,
+  marketCap7dUsd: null,
+  change4hPct: null, // 24H change
+  sparkline7d: null
+};
+
+// Live 5-minute sparkline state (session-local)
+const LIVE_SPARK_MAX_POINTS = 24; // last ~2h at 5-min interval
+let liveSpark = [];
+let lastMetricsUpdateMs = 0;
+
+// Cache last rendered price string so we can animate price flips only on change.
+let lastPriceStr = null;
+
+// Track SALE animation window (per event)
+const SALE_ANIMATION_MS = 5000; // 5 seconds
+const saleAnimationState = new Map(); // eventKey -> endTimeMs
+
 // ==== OPENSEA FLUID MESH BACKGROUND ====
+// Draws a top-down, wavy grid on #opensea-mesh-canvas
 function initOpenSeaMesh() {
   const canvas = document.getElementById("opensea-mesh-canvas");
   if (!canvas) return;
@@ -38,53 +75,54 @@ function initOpenSeaMesh() {
   window.addEventListener("resize", resize);
   resize();
 
-  const COLS = 26; // grid resolution horizontally
-  const ROWS = 26; // grid resolution vertically
+  // Denser grid = more “fabric” detail
+  const COLS = 40;
+  const ROWS = 40;
 
   function point(ix, iy, t) {
-    const gx = (ix / (COLS - 1)) * width;
-    const gy = (iy / (ROWS - 1)) * height;
+    // base grid in [0,1]
+    const u = ix / (COLS - 1);
+    const v = iy / (ROWS - 1);
+
+    const x0 = u * width;
+    const y0 = v * height;
 
     // normalize around center [-1, 1]
-    const u = (gx / width - 0.5) * 2;
-    const v = (gy / height - 0.5) * 2;
+    const nx = (u - 0.5) * 2;
+    const ny = (v - 0.5) * 2;
 
-    // multi-wave height field
-    const wave1 = Math.sin(u * 3.0 + t * 1.3) + Math.cos(v * 3.0 - t * 1.1);
-    const wave2 = Math.sin((u + v) * 4.0 - t * 0.8);
-    const wave = (wave1 + wave2) * 0.5;
+    // multi-wave height field for strong warping
+    const waveA = Math.sin(nx * 3.0 + t * 1.4);
+    const waveB = Math.cos(ny * 4.0 - t * 1.1);
+    const waveC = Math.sin((nx + ny) * 3.5 - t * 0.7);
+    const h = (waveA + waveB + waveC) / 3; // -1..1
 
-    const amp = Math.min(width, height) * 0.06; // displacement amplitude
+    const amp = Math.min(width, height) * 0.10; // displacement amplitude
 
-    // displace along "height" gradient radially
-    const r = Math.sqrt(u * u + v * v) || 1;
-    const nx = u / r;
-    const ny = v / r;
-
-    const dx = nx * wave * amp;
-    const dy = ny * wave * amp;
+    // displace in both X and Y based on height + direction from center
+    const dx = h * amp * nx;
+    const dy = h * amp * ny;
 
     return {
-      x: gx + dx,
-      y: gy + dy,
+      x: x0 + dx,
+      y: y0 + dy
     };
   }
 
   function draw(timestamp) {
-    if (!canvas.isConnected) return; // safety if overlay is removed
+    if (!canvas.isConnected) return;
 
     const t = timestamp / 1000; // seconds
     ctx.clearRect(0, 0, width, height);
 
-    // gradient stroke for some depth/color
+    // gradient stroke for depth/color
     const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.8)"); // cyan
-    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.8)"); // fuchsia
-
+    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.95)"); // cyan
+    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.95)"); // fuchsia
     ctx.lineWidth = 1;
     ctx.strokeStyle = gradient;
 
-    // draw horizontal lines
+    // horizontal lines
     for (let iy = 0; iy < ROWS; iy++) {
       ctx.beginPath();
       for (let ix = 0; ix < COLS; ix++) {
@@ -95,7 +133,7 @@ function initOpenSeaMesh() {
       ctx.stroke();
     }
 
-    // draw vertical lines
+    // vertical lines
     for (let ix = 0; ix < COLS; ix++) {
       ctx.beginPath();
       for (let iy = 0; iy < ROWS; iy++) {
@@ -112,75 +150,10 @@ function initOpenSeaMesh() {
   requestAnimationFrame(draw);
 }
 
-// Hard-coded all-time high for this collection.
-const ALL_TIME_HIGH = {
-  amount: 250000.0,
-  token_symbol: "GUN",
-  name: "APE-FOOL'S GOLD MASK",
-  image:
-    "https://i.seadn.io/gae/HJEYeGP3JTOSU7XmCw6pN6Ko9ztCG_uG6mrtHLyIprRK8su2Tmeah7HKBWqYNmO4PNl5me5ItcwdfBKDmYQjoeeg5V1LJS_K_gankg?auto=format&dpr=1&w=1000",
-};
-
-// ==== UTILITIES ====
-
-function formatShortAddress(addr) {
-  if (!addr || typeof addr !== "string") return "";
-  if (addr.length <= 10) return addr;
-  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
-}
-
-function fromNowShort(timestampMs) {
-  const now = Date.now();
-  const diffSec = Math.max(0, Math.floor((now - timestampMs) / 1000));
-
-  if (diffSec < 60) return `${diffSec}s ago`;
-
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-
-  const diffDay = Math.floor(diffHr / 24);
-  return `${diffDay}d ago`;
-}
-
-function formatDateTime(tsMs) {
-  const date = new Date(tsMs);
-  const options = {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  };
-  const dateStr = date.toLocaleDateString(undefined, options);
-  let hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = ((hours + 11) % 12) + 1; // 0-23 to 1-12
-  return `${dateStr} · ${hours}:${minutes} ${ampm}`;
-}
-
-function formatGunAmount(amount) {
-  if (amount == null || Number.isNaN(amount)) return "—";
-  const n = Number(amount);
-  return `${n.toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  })} GUN`;
-}
-
-function formatUsdAmount(amount) {
-  if (amount == null || Number.isNaN(amount)) return "—";
-  const n = Number(amount);
-  if (!Number.isFinite(n)) return "—";
-  return `$${n.toLocaleString(undefined, {
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-// ==== OVERLAY INIT ====
+// ==== CORE BOOTSTRAP ====
 
 async function initOverlay() {
-  // Animated OpenSea mesh background
+  // Animated OpenSea mesh background (top-down fluid grid)
   initOpenSeaMesh();
 
   // GUN price + sparklines
@@ -194,39 +167,39 @@ async function initOverlay() {
 
 // ==== MARKETPLACE (OPENSEA) ====
 
-// Basic in-memory cache
-let cachedEvents = [];
-let lastFetchedAt = 0;
-let isFetching = false;
-
 async function fetchEvents() {
-  if (isFetching) return;
-  isFetching = true;
-
   const errorEl = document.getElementById("error");
   if (errorEl) errorEl.textContent = "";
 
   try {
-    const url = `${API_PATH}?collectionSlug=${encodeURIComponent(
-      COLLECTION_SLUG
-    )}`;
-    const res = await fetch(url);
+    const params = new URLSearchParams({
+      collection: COLLECTION_SLUG,
+      limit: String(MAX_ITEMS)
+    });
+
+    const res = await fetch(`${API_PATH}?${params.toString()}`, {
+      headers: { Accept: "application/json" }
+    });
+
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      console.error("Proxy error HTTP", res.status);
+      if (errorEl) errorEl.textContent = "Error loading sales feed";
+      return;
     }
 
     const data = await res.json();
-    const events = data?.events || [];
 
-    cachedEvents = events;
-    lastFetchedAt = Date.now();
+    const events = Array.isArray(data.asset_events)
+      ? data.asset_events
+      : Array.isArray(data.events)
+      ? data.events
+      : [];
 
-    renderEvents(events);
+    console.log("Proxy events:", events);
+    await renderEvents(events);
   } catch (err) {
-    console.error("Error fetching events:", err);
+    console.error("Error fetching via proxy:", err);
     if (errorEl) errorEl.textContent = "Error loading sales feed";
-  } finally {
-    isFetching = false;
   }
 }
 
@@ -241,26 +214,28 @@ async function renderEvents(events) {
 
   // 24H session high
   const nowSec = Math.floor(Date.now() / 1000);
-  const dayAgo = nowSec - DAY_SECONDS;
+  const cutoff24h = nowSec - DAY_SECONDS;
 
-  let sessionHigh = null;
+  const events24h = (events || []).filter((ev) => {
+    const tsRaw =
+      ev.event_timestamp || ev.closing_date || ev.created_date || ev.occurred_at;
+    const ts = toUnixSeconds(tsRaw);
+    return typeof ts === "number" && ts >= cutoff24h;
+  });
 
-  for (const ev of events || []) {
-    if (!ev?.event_timestamp) continue;
-    const evSec = Math.floor(new Date(ev.event_timestamp).getTime() / 1000);
-    if (evSec >= dayAgo) {
-      if (
-        !sessionHigh ||
-        Number(ev.payment_token?.usd_price || 0) >
-          Number(sessionHigh.payment_token?.usd_price || 0)
-      ) {
-        sessionHigh = ev;
-      }
-    }
+  const sessionHighEvent = getMaxEventByPrice(events24h);
+
+  // Top row: session high 24H + all-time high
+  if (sessionHighEvent || ALL_TIME_HIGH) {
+    highEl.style.display = "flex";
+    highEl.innerHTML = `
+      ${renderSessionHighCard(sessionHighEvent)}
+      ${renderAllTimeHighCard(ALL_TIME_HIGH)}
+    `;
+  } else {
+    highEl.textContent = "";
+    highEl.style.display = "none";
   }
-
-  // Render 24H session high + all-time high
-  highEl.innerHTML = renderHighCards(sessionHigh, ALL_TIME_HIGH);
 
   // Empty state
   if (!slice.length) {
@@ -276,87 +251,97 @@ async function renderEvents(events) {
   for (const ev of slice) {
     const li = document.createElement("li");
 
-    // Basic fields
-    const itemName =
-      ev?.asset?.name || ev?.asset_bundle?.name || "Unknown item";
-    const imageUrl = ev?.asset?.image_url || ev?.asset_bundle?.asset?.image_url;
+    const nft = ev?.nft || ev?.asset || {};
+    const name = nft.name || `#${nft.identifier || "?"}`;
 
-    const paymentToken = ev?.payment_token;
-    const totalPriceStr = ev?.total_price;
-    const decimals = paymentToken?.decimals ?? 18;
+    const rarityInfo = await getRarityForEvent(ev);
+    const rarityClass = rarityInfo ? rarityInfo.className : "other";
 
-    let amountToken = null;
-    if (totalPriceStr != null) {
-      amountToken = Number(totalPriceStr) / 10 ** decimals;
+    const paymentInfo = getPaymentInfo(ev);
+    const priceStr = paymentInfo.str;
+
+    const tsRaw =
+      ev.event_timestamp || ev.closing_date || ev.created_date || ev.occurred_at;
+    const ts = toUnixSeconds(tsRaw);
+    const dateStr = ts ? formatDateUnixSeconds(ts) : "";
+    const timeStr = ts ? formatUnixSeconds(ts) : "";
+
+    const sellerStr = formatAddress(ev.seller);
+    const buyerStr = formatAddress(ev.buyer);
+    const directionStr =
+      sellerStr && buyerStr ? `${sellerStr} → ${buyerStr}` : "";
+
+    const thumbUrl = nft.display_image_url || nft.image_url || "";
+    const thumbHtml = thumbUrl
+      ? `<img class="thumb" src="${sanitize(thumbUrl)}" alt="${sanitize(
+          name
+        )}" />`
+      : `<div class="thumb thumb-placeholder"></div>`;
+
+    // SALE animation window handling
+    const eventKey = getEventKey(ev);
+    let endTime = saleAnimationState.get(eventKey);
+    if (!endTime) {
+      endTime = nowMs + SALE_ANIMATION_MS;
+      saleAnimationState.set(eventKey, endTime);
     }
+    const stillAnimating = nowMs < endTime;
 
-    const tokenSymbol = paymentToken?.symbol || "GUN";
-    const usdPrice = paymentToken?.usd_price
-      ? Number(paymentToken.usd_price) * amountToken
-      : null;
+    const saleLabelClass = `sale-label${
+      stillAnimating ? " sale-animating" : ""
+    }`;
 
-    const seller = ev?.seller?.address || ev?.seller?.user?.username || null;
-    const buyer = ev?.winner_account?.address || null;
+    const priceClassBase = "sale-price";
+    const priceClass = stillAnimating
+      ? `${priceClassBase} sale-price-animating`
+      : `${priceClassBase} sale-price-final`;
 
-    const createdDateStr = ev?.event_timestamp;
-    const createdMs = createdDateStr
-      ? new Date(createdDateStr).getTime()
-      : null;
+    const initialPriceText =
+      stillAnimating && priceStr ? "…" : priceStr || "";
 
-    const shortFromNow = createdMs ? fromNowShort(createdMs) : "recently";
-
-    // Primary & secondary lines
-    const priceStr =
-      amountToken != null
-        ? `${amountToken.toLocaleString(undefined, {
-            maximumFractionDigits: 2,
-          })} ${tokenSymbol}`
-        : "—";
-
-    const usdStr = usdPrice != null ? formatUsdAmount(usdPrice) : "—";
-
-    const subtitleTime = createdMs ? formatDateTime(createdMs) : "";
-
-    const walletStr =
-      seller || buyer
-        ? [seller ? `Seller: ${formatShortAddress(seller)}` : null,
-          buyer ? `Buyer: ${formatShortAddress(buyer)}` : null]
-            .filter(Boolean)
-            .join(" · ")
-        : "";
+    li.className = `rarity-${sanitize(rarityClass)}`;
 
     li.innerHTML = `
       <div class="event-card">
-        ${
-          imageUrl
-            ? `<div class="event-image">
-                 <img src="${sanitize(imageUrl)}" alt="${sanitize(
-                itemName
-              )}" loading="lazy" />
-               </div>`
-            : ""
-        }
-        <div class="event-body">
-          <div class="event-title-row">
-            <span class="event-title">${sanitize(itemName)}</span>
-            <span class="event-time-ago">${sanitize(shortFromNow)}</span>
+        <div class="thumb-wrapper">
+          ${thumbHtml}
+        </div>
+        <div class="event-main">
+          <!-- Line 1: item name (+ optional rarity pill) -->
+          <div class="event-header">
+            <span class="item-name">${sanitize(name)}</span>
+            ${
+              rarityInfo
+                ? `<span class="rarity-pill rarity-${sanitize(
+                    rarityClass
+                  )}">${sanitize(rarityInfo.label)}</span>`
+                : ""
+            }
           </div>
-          <div class="event-price-line">
-            <span class="event-price-token">Sale <span class="accent">${sanitize(
-              priceStr
-            )}</span></span>
-            <span class="event-price-usd">${sanitize(usdStr)}</span>
+
+          <!-- Line 2: SALE + price (animated) -->
+          <div class="sale-line">
+            <span class="${saleLabelClass}">sale</span>
+            <span class="${priceClass}">
+              ${sanitize(initialPriceText)}
+            </span>
           </div>
+
+          <!-- Line 3: date + time -->
+          <div class="datetime-line">
+            ${
+              dateStr
+                ? sanitize(dateStr)
+                : ""
+            }${
+      timeStr ? (dateStr ? " • " : "") + sanitize(timeStr) : ""
+    }
+          </div>
+
+          <!-- Line 4: direction -->
           ${
-            subtitleTime
-              ? `<div class="event-subtitle">${sanitize(
-                  subtitleTime
-                )}</div>`
-              : ""
-          }
-          ${
-            walletStr
-              ? `<div class="event-wallets">${sanitize(walletStr)}</div>`
+            directionStr
+              ? `<div class="direction-line">${sanitize(directionStr)}</div>`
               : ""
           }
         </div>
@@ -364,144 +349,190 @@ async function renderEvents(events) {
     `;
 
     ul.appendChild(li);
+
+    // Kick off price "calculating" animation for new/active events
+    if (stillAnimating && priceStr) {
+      const priceSpan = li.querySelector(".sale-price");
+      if (priceSpan) {
+        const remainingMs = endTime - nowMs;
+        animateSalePrice(priceSpan, priceStr, remainingMs);
+      }
+    }
   }
 }
 
-function renderHighCards(sessionHigh, allTimeHigh) {
-  const sessionAmount =
-    sessionHigh && sessionHigh.payment_token && sessionHigh.total_price
-      ? Number(sessionHigh.total_price) /
-        10 ** (sessionHigh.payment_token.decimals ?? 18)
-      : null;
+// ==== HIGH CARDS ====
 
-  const sessionName =
-    sessionHigh?.asset?.name ||
-    sessionHigh?.asset_bundle?.name ||
-    "No high sale yet";
-
-  const sessionAmountStr =
-    sessionAmount != null
-      ? `${sessionAmount.toLocaleString(undefined, {
-          maximumFractionDigits: 2,
-        })} GUN`
-      : "—";
-
-  const sessionImage =
-    sessionHigh?.asset?.image_url ||
-    sessionHigh?.asset_bundle?.asset?.image_url ||
-    "";
-
-  const athAmountStr =
-    allTimeHigh?.amount != null
-      ? `${allTimeHigh.amount.toLocaleString(undefined, {
-          maximumFractionDigits: 2,
-        })} ${allTimeHigh.token_symbol || "GUN"}`
-      : "—";
-
-  const athName = allTimeHigh?.name || "All-Time High";
-  const athImage = allTimeHigh?.image || "";
-
-  return `
-    <div class="high-cards">
+function renderSessionHighCard(ev) {
+  if (!ev) {
+    return `
       <div class="high-card">
-        <div class="high-card-label">Session High 24H</div>
-        ${
-          sessionImage
-            ? `<div class="high-card-image">
-                 <img src="${sanitize(sessionImage)}" alt="${sanitize(
-                sessionName
-              )}" loading="lazy" />
-               </div>`
-            : ""
-        }
-        <div class="high-card-body">
-          <div class="high-card-name">${sanitize(sessionName)}</div>
-          <div class="high-card-amount">${sanitize(sessionAmountStr)}</div>
+        <div class="high-thumb-wrapper"></div>
+        <div class="high-sale-text">
+          <div class="high-label">SESSION HIGH 24H</div>
+          <div class="high-value">—</div>
         </div>
       </div>
-      <div class="high-card">
-        <div class="high-card-label">All-Time High</div>
+    `;
+  }
+
+  const nft = ev.nft || ev.asset || {};
+  const name = nft.name || `#${nft.identifier || "?"}`;
+  const priceInfo = getPaymentInfo(ev);
+  const priceStr = priceInfo.str;
+
+  const thumbUrl = nft.display_image_url || nft.image_url || "";
+
+  return `
+    <div class="high-card">
+      <div class="high-thumb-wrapper">
         ${
-          athImage
-            ? `<div class="high-card-image">
-                 <img src="${sanitize(athImage)}" alt="${sanitize(
-                athName
-              )}" loading="lazy" />
-               </div>`
+          thumbUrl
+            ? `<img class="high-thumb" src="${sanitize(thumbUrl)}" alt="" />`
             : ""
         }
-        <div class="high-card-body">
-          <div class="high-card-name">${sanitize(athName)}</div>
-          <div class="high-card-amount">${sanitize(athAmountStr)}</div>
-        </div>
+      </div>
+      <div class="high-sale-text">
+        <div class="high-label">SESSION HIGH 24H</div>
+        <div class="high-value">${sanitize(name)}</div>
+        <div class="high-value">${priceStr ? sanitize(priceStr) : ""}</div>
       </div>
     </div>
   `;
 }
 
-// ==== GUN TOKEN METRICS + SPARKLINES ====
+function renderAllTimeHighCard(config) {
+  if (!config || config.amount == null || !config.symbol || !config.name) {
+    return `
+      <div class="high-card">
+        <div class="high-thumb-wrapper"></div>
+        <div class="high-sale-text">
+          <div class="high-label">ALL-TIME HIGH</div>
+          <div class="high-value">—</div>
+        </div>
+      </div>
+    `;
+  }
 
-// In-memory cache for sparkline data
-let gunPriceSeriesLive = [];
-let gunPriceSeries24h = [];
-let gunLastUpdatedAt = 0;
+  const priceStr = `${config.amount.toFixed(2)} ${config.symbol}`;
+  const thumbUrl = config.thumbUrl || "";
+
+  return `
+    <div class="high-card">
+      <div class="high-thumb-wrapper">
+        ${
+          thumbUrl
+            ? `<img class="high-thumb" src="${sanitize(thumbUrl)}" alt="" />`
+            : ""
+        }
+      </div>
+      <div class="high-sale-text">
+        <div class="high-label">ALL-TIME HIGH</div>
+        <div class="high-value">${sanitize(config.name)}</div>
+        <div class="high-value">${sanitize(priceStr)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ==== GUN METRICS (COINGECKO) ====
 
 async function fetchGunMetrics() {
   try {
-    const res = await fetch(GUN_METRICS_URL);
+    const res = await fetch(GUN_METRICS_URL, {
+      headers: { Accept: "application/json" }
+    });
+
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      console.error("gun-metrics error HTTP", res.status);
+      gunMetrics = nullMetrics();
+      renderGunMetrics();
+      return;
     }
 
     const data = await res.json();
-    if (!data) return;
+    console.log("gun-metrics data", data);
 
-    renderGunMetrics(data);
-    updateSparklineData(data);
-    renderSparklines();
+    gunMetrics = {
+      priceUsd: data.priceUsd ?? null,
+      marketCapUsd: data.marketCapUsd ?? null,
+      vol1dUsd: data.vol1dUsd ?? null,
+      marketCap1dUsd: data.marketCap1dUsd ?? null,
+      marketCap7dUsd: data.marketCap7dUsd ?? null,
+      change4hPct: data.change4hPct ?? null,
+      sparkline7d: Array.isArray(data.sparkline7d) ? data.sparkline7d : null
+    };
+
+    // Update live 5-minute sparkline series
+    const priceForSpark = gunMetrics.priceUsd;
+    if (priceForSpark != null && !Number.isNaN(priceForSpark)) {
+      liveSpark.push(Number(priceForSpark));
+      if (liveSpark.length > LIVE_SPARK_MAX_POINTS) {
+        liveSpark = liveSpark.slice(-LIVE_SPARK_MAX_POINTS);
+      }
+    }
+    lastMetricsUpdateMs = Date.now();
+
+    renderGunMetrics();
   } catch (err) {
-    console.error("Error fetching GUN metrics:", err);
+    console.error("Error fetching gun-metrics", err);
+    gunMetrics = nullMetrics();
+    renderGunMetrics();
   }
 }
 
-function renderGunMetrics(metrics) {
+function nullMetrics() {
+  return {
+    priceUsd: null,
+    marketCapUsd: null,
+    vol1dUsd: null,
+    marketCap1dUsd: null,
+    marketCap7dUsd: null,
+    change4hPct: null,
+    sparkline7d: null
+  };
+}
+
+function renderGunMetrics() {
   const priceEl = document.getElementById("gun-price");
+  const sparkContainer = document.getElementById("gun-sparkline");
+  const liveEl =
+    document.getElementById("gun-sparkline-live") || sparkContainer;
+  const spark24El = document.getElementById("gun-sparkline-24h");
   if (!priceEl) return;
 
-  const price = metrics?.market_data?.current_price?.usd ?? null;
-  const marketCap = metrics?.market_data?.market_cap?.usd ?? null;
-  const volume24h = metrics?.market_data?.total_volume?.usd ?? null;
-  const change24h = metrics?.market_data?.price_change_percentage_24h ?? null;
+  const { priceUsd, marketCapUsd, vol1dUsd, change4hPct, sparkline7d } =
+    gunMetrics;
 
-  const priceStr =
-    price != null
-      ? `$${price.toLocaleString(undefined, {
-          minimumFractionDigits: 4,
-          maximumFractionDigits: 6,
-        })}`
-      : "—";
-
-  const marketCapStr = marketCap != null ? formatDollarsShort(marketCap) : "—";
-  const volumeStr = volume24h != null ? formatDollarsShort(volume24h) : "—";
-  const changeStr = change24h != null ? `${change24h.toFixed(2)}%` : "—";
+  // Main token metrics ----------------------------------------------------
+  const priceStr = formatGunPrice(priceUsd);
+  const capStr = formatUsdShort(marketCapUsd);
+  const volStr = formatUsdShort(vol1dUsd);
+  const changeStr = formatPct(change4hPct);
 
   const changeClass =
-    change24h == null
-      ? "metric-change neutral"
-      : change24h > 0
-      ? "metric-change positive"
-      : change24h < 0
-      ? "metric-change negative"
-      : "metric-change neutral";
+    change4hPct == null
+      ? "gun-change"
+      : change4hPct > 0
+      ? "gun-change positive"
+      : change4hPct < 0
+      ? "gun-change negative"
+      : "gun-change";
 
-  const priceSpanClass =
-    change24h == null
-      ? "gun-price neutral"
-      : change24h > 0
-      ? "gun-price positive"
-      : change24h < 0
-      ? "gun-price negative"
-      : "gun-price neutral";
+  const trendClass =
+    change4hPct == null
+      ? ""
+      : change4hPct > 0
+      ? "positive"
+      : change4hPct < 0
+      ? "negative"
+      : "";
+
+  // Flip-clock style animation: only when price actually changes
+  const shouldFlip = lastPriceStr !== null && priceStr !== lastPriceStr;
+  lastPriceStr = priceStr;
+
+  const priceSpanClass = `gun-price${shouldFlip ? " flip-animate" : ""}`;
 
   priceEl.innerHTML = `
     <div class="gun-metrics">
@@ -515,172 +546,500 @@ function renderGunMetrics(metrics) {
       <div class="gun-metric-grid">
         <div class="metric">
           <span class="metric-label">Mkt Cap</span>
-          <span class="metric-value">${sanitize(marketCapStr)}</span>
+          <span class="metric-value">${sanitize(capStr)}</span>
         </div>
         <div class="metric">
           <span class="metric-label">Vol 24H</span>
-          <span class="metric-value">${sanitize(volumeStr)}</span>
+          <span class="metric-value">${sanitize(volStr)}</span>
         </div>
       </div>
     </div>
   `;
+
+  // ---- Build 24H series (price) + normalized % version ------------------
+  let series24h = [];
+  let series24hPct = [];
+  let delta24hPct = null;
+  let high24h = null;
+  let low24h = null;
+
+  if (Array.isArray(sparkline7d) && sparkline7d.length >= 2) {
+    const len = sparkline7d.length;
+    const windowSize = Math.max(2, Math.floor(len / 7)); // ≈ last 24h
+    const sliced = sparkline7d.slice(len - windowSize);
+    series24h = sliced.filter(
+      (v) => typeof v === "number" && !Number.isNaN(v)
+    );
+
+    if (series24h.length >= 2) {
+      const open = series24h[0];
+      const close = series24h[series24h.length - 1];
+
+      if (
+        typeof open === "number" &&
+        typeof close === "number" &&
+        !Number.isNaN(open) &&
+        !Number.isNaN(close) &&
+        open !== 0
+      ) {
+        delta24hPct = ((close / open) - 1) * 100;
+      }
+
+      high24h = Math.max(...series24h);
+      low24h = Math.min(...series24h);
+
+      if (open && !Number.isNaN(open) && open !== 0) {
+        series24hPct = series24h.map((v) => ((v / open) - 1) * 100);
+      }
+    }
+  }
+
+  // ---- 1H change from liveSpark (~12 last points) -----------------------
+  let delta1hPct = null;
+  const ONE_H_POINTS = 12;
+
+  if (liveSpark.length >= 2) {
+    const slice1h =
+      liveSpark.length > ONE_H_POINTS
+        ? liveSpark.slice(liveSpark.length - ONE_H_POINTS)
+        : liveSpark.slice();
+
+    const first = slice1h[0];
+    const last = slice1h[slice1h.length - 1];
+
+    if (
+      typeof first === "number" &&
+      typeof last === "number" &&
+      !Number.isNaN(first) &&
+      !Number.isNaN(last) &&
+      first !== 0
+    ) {
+      delta1hPct = ((last / first) - 1) * 100;
+    }
+  }
+
+  const delta1hStr =
+    delta1hPct == null ? "Δ1H: —" : `Δ1H: ${formatPct(delta1hPct)}`;
+  const delta24hStatStr =
+    delta24hPct == null ? "Δ24H: —" : `Δ24H: ${formatPct(delta24hPct)}`;
+
+  const highStr = high24h == null ? "—" : formatGunPrice(high24h);
+  const lowStr = low24h == null ? "—" : formatGunPrice(low24h);
+
+  const stat24hLines = [delta24hStatStr];
+
+  if (highStr !== "—") stat24hLines.push(`High: ${highStr}`);
+  if (lowStr !== "—") stat24hLines.push(`Low: ${lowStr}`);
+
+  const stat24hHtml = stat24hLines
+    .map((line) => `<div class="sparkline-stat-line">${line}</div>`)
+    .join("");
+
+
+  // ---- Live 5-minute sparkline (left) – raw price -----------------------
+  if (liveEl) {
+    const now = Date.now();
+    const isFresh = now - lastMetricsUpdateMs < 5000; // blink end for 5s
+
+    if (liveSpark.length >= 2) {
+      liveEl.innerHTML = renderSparkline(liveSpark, trendClass, {
+        showEndDot: isFresh
+      });
+    } else {
+      // Not enough live data yet – no fallback
+      liveEl.innerHTML = "";
+    }
+  }
+
+  // ---- 24H sparkline (right) – normalized % area + zero baseline --------
+  if (spark24El) {
+    if (series24hPct.length >= 2) {
+      spark24El.innerHTML = renderSparkline(series24hPct, trendClass, {
+        showEndDot: false,
+        asArea: true,
+        showZeroLine: true,
+        isPercent: true
+      });
+    } else {
+      spark24El.innerHTML = "";
+    }
+  } else if (
+    sparkContainer &&
+    !document.getElementById("gun-sparkline-live")
+  ) {
+    // Fallback: single sparkline container – render 24H % view only
+    if (series24hPct.length >= 2) {
+      sparkContainer.innerHTML = renderSparkline(series24hPct, trendClass, {
+        showEndDot: false,
+        asArea: true,
+        showZeroLine: true,
+        isPercent: true
+      });
+    } else {
+      sparkContainer.innerHTML = "";
+    }
+  }
+
+  // ---- Stat lines under each sparkline label ----------------------------
+  if (liveEl && liveEl.parentElement) {
+    let liveStatEl = document.getElementById("gun-sparkline-live-stat");
+    if (!liveStatEl) {
+      liveStatEl = document.createElement("div");
+      liveStatEl.id = "gun-sparkline-live-stat";
+      liveStatEl.className = "sparkline-stat";
+      liveEl.parentElement.appendChild(liveStatEl);
+    }
+    liveStatEl.textContent = delta1hStr;
+  }
+
+  if (spark24El && spark24El.parentElement) {
+    let stat24El = document.getElementById("gun-sparkline-24h-stat");
+    if (!stat24El) {
+      stat24El = document.createElement("div");
+      stat24El.id = "gun-sparkline-24h-stat";
+      stat24El.className = "sparkline-stat";
+      spark24El.parentElement.appendChild(stat24El);
+    }
+    stat24El.innerHTML = stat24hHtml;
+  }
 }
 
-function updateSparklineData(metrics) {
-  const now = Date.now();
+function renderSparkline(values, trendClass, opts = {}) {
+  const width = opts.width || 140;
+  const height = opts.height || 32;
+  const marginX = opts.marginX ?? 2;
+  const marginY = opts.marginY ?? 2;
+  const showEndDot = opts.showEndDot === true;
+  const asArea = opts.asArea === true;
+  const showZeroLine = opts.showZeroLine === true;
 
-  const liveSeries = metrics?.sparkline_in_5min?.map((p) => ({
-    t: p[0],
-    v: p[1],
-  }));
-  const series24h = metrics?.sparkline_24h?.map((p) => ({
-    t: p[0],
-    v: p[1],
-  }));
+  const filtered = values.filter(
+    (v) => typeof v === "number" && !Number.isNaN(v)
+  );
+  if (filtered.length < 2) return "";
 
-  if (Array.isArray(liveSeries) && liveSeries.length > 0) {
-    gunPriceSeriesLive = liveSeries;
+  const min = Math.min(...filtered);
+  const max = Math.max(...filtered);
+  const range = max - min || 1;
+
+  const stepX = (width - marginX * 2) / (filtered.length - 1);
+  const innerHeight = height - marginY * 2;
+
+  const points = [];
+  filtered.forEach((v, i) => {
+    const x = marginX + i * stepX;
+    const norm = (v - min) / range;
+    const y = height - marginY - norm * innerHeight;
+    points.push({ x, y });
+  });
+
+  let d = "";
+  points.forEach((pt, i) => {
+    d += (i === 0 ? "M" : "L") + pt.x.toFixed(2) + " " + pt.y.toFixed(2) + " ";
+  });
+
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  // Optional area fill under the curve
+  let dArea = "";
+  if (asArea && first && last) {
+    const bottomY = (height - marginY).toFixed(2);
+    dArea = `M ${first.x.toFixed(2)} ${bottomY} `;
+    points.forEach((pt) => {
+      dArea += `L ${pt.x.toFixed(2)} ${pt.y.toFixed(2)} `;
+    });
+    dArea += `L ${last.x.toFixed(2)} ${bottomY} Z`;
   }
-  if (Array.isArray(series24h) && series24h.length > 0) {
-    gunPriceSeries24h = series24h;
+
+  const baseLineClass =
+    trendClass ? `sparkline-path ${trendClass}` : "sparkline-path";
+  const areaClass =
+    trendClass ? `sparkline-area ${trendClass}` : "sparkline-area";
+
+  const endDot =
+    showEndDot && last
+      ? `<circle class="sparkline-end-dot" cx="${last.x.toFixed(
+          2
+        )}" cy="${last.y.toFixed(2)}" r="1.8" />`
+      : "";
+
+  // Zero baseline (for normalized 24H % view)
+  let zeroLineSvg = "";
+  if (showZeroLine) {
+    const zeroNorm = (0 - min) / range;
+    let yZero = height - marginY - zeroNorm * innerHeight;
+    // Clamp inside chart bounds so it's always visible
+    if (yZero < marginY) yZero = marginY;
+    if (yZero > height - marginY) yZero = height - marginY;
+
+    zeroLineSvg = `<line class="sparkline-zero-line"
+      x1="${marginX.toFixed(2)}"
+      y1="${yZero.toFixed(2)}"
+      x2="${(width - marginX).toFixed(2)}"
+      y2="${yZero.toFixed(2)}"
+    />`;
   }
 
-  gunLastUpdatedAt = now;
+  return `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      ${
+        asArea && dArea
+          ? `<path class="${areaClass}" d="${dArea.trim()}" />`
+          : ""
+      }
+      <path class="${baseLineClass}" d="${d.trim()}" pathLength="100" />
+      ${zeroLineSvg}
+      ${endDot}
+    </svg>
+  `;
 }
 
-function renderSparklines() {
-  const liveEl = document.getElementById("gun-sparkline-live");
-  const h24El = document.getElementById("gun-sparkline-24h");
-  const summaryEl = document.getElementById("gun-sparkline-summary");
-  if (!liveEl || !h24El) return;
+// ==== SALE KEY + PRICE ANIMATION HELPERS ====
 
-  const liveSeries = gunPriceSeriesLive || [];
-  const series24h = gunPriceSeries24h || [];
+function getEventKey(ev) {
+  const nft = ev?.nft || ev?.asset || {};
+  const id =
+    ev.id ||
+    ev.event_id ||
+    ev.order_hash ||
+    ev.transaction_hash ||
+    ev.tx_hash ||
+    "";
+  const contract =
+    nft.contract ||
+    nft.contract_address ||
+    nft.asset_contract_address ||
+    "";
+  const tokenId = nft.identifier || nft.token_id || "";
+  const ts =
+    ev.event_timestamp ||
+    ev.closing_date ||
+    ev.created_date ||
+    ev.occurred_at ||
+    "";
+  return [id, contract, tokenId, ts].filter(Boolean).join("|");
+}
 
-  liveEl.innerHTML = "";
-  h24El.innerHTML = "";
+// Animate the sale price so it looks like it's "calculating" before settling
+function animateSalePrice(span, finalStr, maxMs) {
+  if (!span || !finalStr) return;
 
-  const drawSpark = (
-    container,
-    series,
-    options = { isArea: false, color: "#f472b6" }
-  ) => {
-    if (!series.length) return;
+  const match = finalStr.match(/([\d.,]+)/);
+  const baseNum = match ? parseFloat(match[1].replace(/,/g, "")) : null;
+  const decimals = match && match[1].includes(".")
+    ? match[1].split(".")[1].length
+    : 2;
 
-    const width = container.clientWidth || 140;
-    const height = container.clientHeight || 48;
-    const padding = 2;
+  // Animate for up to 5s, or the remaining animation window if shorter
+  const duration = Math.min(maxMs || 5000, 5000);
+  const start = performance.now();
 
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("width", width);
-    svg.setAttribute("height", height);
-    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    svg.classList.add("sparkline-svg");
+  function frame(now) {
+    if (!span.isConnected) return;
 
-    const values = series.map((p) => p.v);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const t = (now - start) / duration;
+    if (t >= 1 || baseNum == null) {
+      span.textContent = finalStr;
+      span.classList.remove("sale-price-animating");
+      span.classList.add("sale-price-final");
+      return;
+    }
 
-    const span = max - min || 1;
-    const innerWidth = width - padding * 2;
-    const innerHeight = height - padding * 2;
+    // Generate a jittered interim price
+    const jitter = baseNum * (0.6 + Math.random() * 0.8);
+    const interim = jitter.toFixed(decimals);
+    if (match) {
+      span.textContent = finalStr.replace(match[1], interim);
+    } else {
+      span.textContent = finalStr;
+    }
 
-    const lastIndex = series.length - 1;
+    requestAnimationFrame(frame);
+  }
 
-    let d = "";
-    series.forEach((p, idx) => {
-      const x = padding + (innerWidth * idx) / lastIndex;
-      const y = padding + innerHeight - ((p.v - min) / span) * innerHeight;
-      d += idx === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+  span.classList.add("sale-price-animating");
+  span.classList.remove("sale-price-final");
+  span.textContent = "…";
+  requestAnimationFrame(frame);
+}
+
+// ==== PAYMENT / RARITY / FORMATTING HELPERS ====
+
+function getPaymentInfo(ev) {
+  const payment = ev?.payment || {};
+  const quantityRaw = payment.quantity;
+  const decimals = Number(payment.decimals ?? 18);
+  const symbol = payment.symbol || "";
+
+  if (!quantityRaw) return { amount: null, str: "" };
+
+  const qtyNum = Number(quantityRaw) / Math.pow(10, decimals);
+  if (Number.isNaN(qtyNum)) return { amount: null, str: "" };
+
+  return {
+    amount: qtyNum,
+    str: `${qtyNum.toFixed(2)} ${symbol}`.trim()
+  };
+}
+
+function getMaxEventByPrice(events) {
+  let best = null;
+  let bestAmount = -Infinity;
+  for (const ev of events || []) {
+    const { amount } = getPaymentInfo(ev);
+    if (amount != null && amount > bestAmount) {
+      bestAmount = amount;
+      best = ev;
+    }
+  }
+  return best;
+}
+
+async function getRarityForEvent(ev) {
+  const nft = ev?.nft || ev?.asset;
+  if (!nft) return null;
+
+  const key =
+    nft.metadata_url ||
+    (nft.collection && nft.identifier
+      ? `${nft.collection}:${nft.identifier}`
+      : null);
+
+  if (!key) return null;
+  if (rarityCache.has(key)) return rarityCache.get(key);
+  if (!nft.metadata_url) {
+    rarityCache.set(key, null);
+    return null;
+  }
+
+  try {
+    const res = await fetch(nft.metadata_url, {
+      headers: { Accept: "application/json" }
     });
 
-    if (options.isArea) {
-      const areaPath = document.createElementNS(svgNS, "path");
-      let areaD = d;
-      const firstY =
-        padding +
-        innerHeight -
-        ((series[0].v - min) / span) * innerHeight;
-      const lastX = padding + innerWidth;
-      const lastY =
-        padding +
-        innerHeight -
-        ((series[lastIndex].v - min) / span) * innerHeight;
+    if (!res.ok) throw new Error(`metadata HTTP ${res.status}`);
 
-      areaD += ` L ${lastX} ${padding + innerHeight}`;
-      areaD += ` L ${padding} ${padding + innerHeight}`;
-      areaD += " Z";
+    const json = await res.json();
+    const attrsSource =
+      json.attributes ||
+      json.traits ||
+      (json.properties && json.properties.attributes) ||
+      [];
+    const attrs = Array.isArray(attrsSource) ? attrsSource : [];
 
-      areaPath.setAttribute("d", areaD);
-      areaPath.setAttribute("fill", "rgba(236, 72, 153, 0.15)");
-      areaPath.setAttribute("stroke", "none");
-      svg.appendChild(areaPath);
+    if (!attrs.length) {
+      rarityCache.set(key, null);
+      return null;
     }
 
-    const path = document.createElementNS(svgNS, "path");
-    path.setAttribute("d", d);
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke-width", options.isArea ? "1" : "1.4");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    path.classList.add(
-      options.isArea ? "sparkline-path-24h" : "sparkline-path-live"
-    );
-    path.setAttribute("stroke", options.color);
+    const rarityAttr = attrs.find((attr) => {
+      const traitKey = (
+        attr.trait_type ||
+        attr.type ||
+        attr.name ||
+        ""
+      )
+        .toString()
+        .toLowerCase();
 
-    svg.appendChild(path);
+      return (
+        traitKey.includes("rarity") ||
+        traitKey.includes("tier") ||
+        traitKey.includes("grade") ||
+        traitKey.includes("quality")
+      );
+    });
 
-    const last = series[lastIndex];
-    const lastX = padding + innerWidth;
-    const lastY =
-      padding + innerHeight - ((last.v - min) / span) * innerHeight;
-
-    const dot = document.createElementNS(svgNS, "circle");
-    dot.setAttribute("cx", lastX);
-    dot.setAttribute("cy", lastY);
-    dot.setAttribute("r", "2.1");
-    dot.classList.add("sparkline-dot");
-    svg.appendChild(dot);
-
-    container.appendChild(svg);
-  };
-
-  drawSpark(liveEl, liveSeries, {
-    isArea: false,
-    color: "#f472b6",
-  });
-
-  drawSpark(h24El, series24h, {
-    isArea: true,
-    color: "#22d3ee",
-  });
-
-  if (summaryEl && series24h.length) {
-    const first = series24h[0].v;
-    const last = series24h[series24h.length - 1].v;
-    const changePct = ((last - first) / first) * 100;
-
-    const labelEl = summaryEl.querySelector(".sparkline-summary-label");
-    const valueEl = summaryEl.querySelector(".sparkline-summary-value");
-
-    if (labelEl && valueEl) {
-      const sign = changePct > 0 ? "+" : "";
-      labelEl.textContent = "Δ24H";
-      valueEl.textContent = `${sign}${changePct.toFixed(2)}%`;
-      valueEl.className =
-        "sparkline-summary-value " +
-        (changePct > 0
-          ? "positive"
-          : changePct < 0
-          ? "negative"
-          : "neutral");
+    if (!rarityAttr) {
+      rarityCache.set(key, null);
+      return null;
     }
+
+    const raw = String(
+      rarityAttr.value ?? rarityAttr.trait_type ?? rarityAttr.name ?? ""
+    ).trim();
+    if (!raw) {
+      rarityCache.set(key, null);
+      return null;
+    }
+
+    const lower = raw.toLowerCase();
+    let className = "other";
+
+    if (lower.includes("common") && !lower.includes("uncommon"))
+      className = "common";
+    else if (lower.includes("uncommon")) className = "uncommon";
+    else if (lower.includes("epic")) className = "epic";
+    else if (lower.includes("rare")) className = "rare";
+
+    const result = { label: raw, className };
+    rarityCache.set(key, result);
+    return result;
+  } catch (err) {
+    console.error("Error fetching metadata for rarity", err);
+    rarityCache.set(key, null);
+    return null;
   }
 }
 
-// Short dollar format like 17.1M, 4.5K, etc.
-function formatDollarsShort(n) {
+function formatAddress(addr) {
+  if (!addr || typeof addr !== "string") return "";
+  const clean = addr.toLowerCase();
+  const last4 = clean.slice(-4);
+  return `…${last4}`;
+}
+
+function toUnixSeconds(value) {
+  if (value == null) return null;
+  if (typeof value === "number") return value;
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) return null;
+  return Math.floor(ms / 1000);
+}
+
+function formatUnixSeconds(sec) {
+  const d = new Date(sec * 1000);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatDateUnixSeconds(sec) {
+  const d = new Date(sec * 1000);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const weekday = d.toLocaleDateString(undefined, { weekday: "long" });
+  const month = d.toLocaleDateString(undefined, { month: "long" });
+  const day = d.getDate();
+  const suffix = getOrdinalSuffix(day);
+
+  return `${weekday}, ${month} ${day}${suffix}`;
+}
+
+function getOrdinalSuffix(n) {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return "th";
+  switch (n % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
+}
+
+function formatGunPrice(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  return n < 1 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+}
+
+function formatUsdShort(n) {
   if (n == null || Number.isNaN(n)) return "—";
   const abs = Math.abs(n);
   if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
