@@ -90,15 +90,14 @@ body {
 }
 
 /* <------ START OPENSEA SECTION ------> */
-/* OpenSea section with animated mesh background */
+/* OpenSea section with animated mesh background (canvas only) */
 #opensea-section {
   position: relative;
   margin-top: 4px;
-  padding: 8px;
+  padding: 0;                /* full-bleed mesh */
   border-radius: 10px;
   overflow: hidden;
-  /* you can keep your existing background color if you want */
-  background: radial-gradient(circle at top, #020617 0%, #020617 45%, #020617 100%);
+  background: #020617;       /* dark base under the mesh */
 }
 
 /* Full-bleed canvas sitting behind the content */
@@ -109,7 +108,7 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 0.6;              /* dial this down if it’s too strong */
+  opacity: 0.85;             /* dial this down if it’s too strong */
   mix-blend-mode: screen;    /* lets the grid “glow” into the background */
   pointer-events: none;
 }
@@ -120,99 +119,16 @@ body {
   z-index: 1;
 }
 
-/* 2) Perspective "3D" grid like a wavy surface */
-#opensea-section::after {
-  content: "";
-  position: absolute;
-
-  /* large plane, tilted away from viewer */
-  left: -25%;
-  right: -25%;
-  bottom: -60%;
-  top: 20%;
-
-  background-image:
-    repeating-linear-gradient(
-      to right,
-      rgba(0, 255, 255, 0.45) 0px,
-      rgba(0, 255, 255, 0.45) 1px,
-      transparent 1px,
-      transparent 18px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      rgba(0, 180, 255, 0.45) 0px,
-      rgba(0, 180, 255, 0.45) 1px,
-      transparent 1px,
-      transparent 18px
-    );
-  background-size: 160% 160%;
-  background-position: 0% 0%, 0% 0%;
-
-  /* fake 3D */
-  transform-origin: top center;
-  transform: perspective(900px) rotateX(70deg) scale(1.25);
-  filter: blur(1px);
-
-  /* fade toward the top/distance */
-  box-shadow: 0 -60px 120px rgba(2, 6, 23, 0.95) inset;
-
-  opacity: 0.55;
-  mix-blend-mode: screen;
-
-  animation: openseaOceanGrid 22s ease-in-out infinite alternate;
-
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Ensure content sits above both layers */
-#opensea-section > * {
-  position: relative;
-  z-index: 2;
-}
-
-/* === Animations === */
-
-@keyframes openseaOceanGlow {
-  0% {
-    background-position:
-      50% 120%,
-      10% 10%,
-      90% 0%,
-      0% 0%;
-  }
-  50% {
-    background-position:
-      55% 110%,
-      20% 0%,
-      80% 10%,
-      0% 20%;
-  }
-  100% {
-    background-position:
-      45% 125%,
-      0% 20%,
-      100% 0%,
-      0% 0%;
-  }
-}
-
-@keyframes openseaOceanGrid {
-  0% {
-    background-position: 0% 0%, 0% 0%;
-  }
-  50% {
-    background-position: 12% 8%, -6% 18%;
-  }
-  100% {
-    background-position: 25% -4%, -12% 30%;
-  }
+/* Put padding back onto the OpenSea content so it doesn’t hug the edges */
+#high-sale,
+#events,
+#error {
+  padding: 8px 8px 6px 8px;
 }
 
 /* <------ END OPENSEA SECTION ------> */
 
-/* Metrics block */
+/* Metrics block ---------------------------------------------------------- */
 
 #gun-price {
   margin-bottom: 0;
@@ -262,8 +178,6 @@ body {
   }
 }
 
-
-
 .gun-change {
   font-size: 11px;
 }
@@ -293,10 +207,6 @@ body {
   font-size: 11px;
   font-weight: 500;
 }
-
-/* Sparkline -------------------------------------------------------------- */
-
-/* Sparkline -------------------------------------------------------------- */
 
 /* Sparkline -------------------------------------------------------------- */
 
@@ -593,7 +503,7 @@ body {
   color: #e5e7eb;
 }
 
-/* Marketplace event layout ------------------------------------------------ */
+/* Marketplace event layout ----------------------------------------------- */
 
 .event-card {
   display: flex;
@@ -692,13 +602,13 @@ body {
   color: #4dd9b3;
 }
 
-/* Line 3: date + time (you already had similar styles) */
+/* Line 3: date + time */
 .datetime-line {
   font-size: 11px;
   color: #9ca3af;
 }
 
-/* Line 4: direction – keep your existing palette but ensure it's set */
+/* Line 4: direction */
 .direction-line {
   font-size: 11px;
   color: #d1d5db;
