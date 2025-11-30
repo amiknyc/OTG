@@ -76,8 +76,8 @@ function initOpenSeaMesh() {
   resize();
 
   // Coarser grid so you can clearly see the curvature
-  const COLS = 32;
-  const ROWS = 32;
+  const COLS = 40;
+  const ROWS = 40;
 
   function point(ix, iy, t) {
     const u = ix / (COLS - 1);
@@ -104,7 +104,7 @@ function initOpenSeaMesh() {
     return { x: x0 + dx, y: y0 + dy };
   }
 
-  const SPEED = 0.35; // lower = slower, higher = faster
+  const SPEED = 0.45; // lower = slower, higher = faster
 
 function draw(timestamp) {
   if (!canvas.isConnected) return;
