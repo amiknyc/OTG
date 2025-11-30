@@ -2,52 +2,133 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>OFF THE GRID | GUNZILLA</title>
+    <title>CryptoHaki | Streaming Overlays</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="public/style.css" />
+
+    <!-- Shared tokens + base styles -->
+    <link rel="stylesheet" href="public/css/base.css" />
+    <!-- Index page only -->
+    <link rel="stylesheet" href="public/css/index.css" />
   </head>
-  <body>
-    <div id="overlay">
-      <!-- GUN token section -->
-      <div class="header">
-        <span class="title">GUN Token Price Action</span>
-      </div>
+  <body class="index-body">
+    <main class="index-container">
+      <header class="index-header">
+        <h1>CryptoHaki Streaming Overlays</h1>
+        <p class="index-subtitle">
+          Quick links and previews for all overlay modules. Use these URLs as
+          browser sources in OBS.
+        </p>
+      </header>
 
-      <div id="gun-token-section">
-        <div id="gun-price"></div>
-
-        <div id="gun-sparkline">
-          <div class="sparkline-block">
-            <div class="sparkline-label">Live (5m updates)</div>
-            <div id="gun-sparkline-live" class="sparkline-chart"></div>
+      <section class="overlay-grid">
+        <!-- Twitch Header -->
+        <article class="overlay-card">
+          <div class="overlay-card-header">
+            <h2 class="overlay-title">Twitch Header</h2>
+            <span class="overlay-tag">/twitch_header.html</span>
           </div>
 
-          <div class="sparkline-block">
-            <div class="sparkline-label">Last 24H</div>
-            <div id="gun-sparkline-24h" class="sparkline-chart"></div>
+          <div class="overlay-preview">
+            <div class="overlay-preview-inner">
+              <iframe
+                src="twitch_header.html"
+                title="Twitch Header Preview"
+                loading="lazy"
+              ></iframe>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div class="section-divider"></div>
+          <div class="overlay-meta">
+            <p class="overlay-description">
+              Responsive flexbox header with your handle and social links.
+              Designed to sit at the top of your Twitch scene.
+            </p>
+            <div class="overlay-actions">
+              <a
+                class="btn-primary"
+                href="twitch_header.html"
+                target="_blank"
+                rel="noopener"
+              >
+                Open overlay
+              </a>
+              <code class="overlay-url">/twitch_header.html</code>
+            </div>
+          </div>
+        </article>
 
-      <!-- Marketplace section -->
-      <div class="subheader">
-        <span class="subtitle">OpenSea Marketplace Activity</span>
-      </div>
+        <!-- GUN Price -->
+        <article class="overlay-card">
+          <div class="overlay-card-header">
+            <h2 class="overlay-title">GUN Token Price</h2>
+            <span class="overlay-tag">/gun_price.html</span>
+          </div>
 
-      <!-- New wrapper for OpenSea / marketplace so it can have its own background -->
-      <section id="opensea-section">
-        <!-- New: fluid mesh canvas, sits behind all content -->
-        <canvas id="opensea-mesh-canvas"></canvas>
+          <div class="overlay-preview">
+            <div class="overlay-preview-inner">
+              <iframe
+                src="gun_price.html"
+                title="GUN Token Price Preview"
+                loading="lazy"
+              ></iframe>
+            </div>
+          </div>
 
-        <div id="high-sale"></div>
-        <ul id="events"></ul>
-        <div id="error"></div>
+          <div class="overlay-meta">
+            <p class="overlay-description">
+              Live GUN price, 1H/24H deltas, and dual sparklines. Use as a
+              standalone widget or combined with other overlays.
+            </p>
+            <div class="overlay-actions">
+              <a
+                class="btn-primary"
+                href="gun_price.html"
+                target="_blank"
+                rel="noopener"
+              >
+                Open overlay
+              </a>
+              <code class="overlay-url">/gun_price.html</code>
+            </div>
+          </div>
+        </article>
+
+        <!-- OTG Marketplace -->
+        <article class="overlay-card">
+          <div class="overlay-card-header">
+            <h2 class="overlay-title">OTG Marketplace Activity</h2>
+            <span class="overlay-tag">/otg_marketplace.html</span>
+          </div>
+
+          <div class="overlay-preview">
+            <div class="overlay-preview-inner">
+              <iframe
+                src="otg_marketplace.html"
+                title="OTG Marketplace Preview"
+                loading="lazy"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="overlay-meta">
+            <p class="overlay-description">
+              OpenSea sales feed with rarity tagging, animated mesh background,
+              session high, and all-time high callouts.
+            </p>
+            <div class="overlay-actions">
+              <a
+                class="btn-primary"
+                href="otg_marketplace.html"
+                target="_blank"
+                rel="noopener"
+              >
+                Open overlay
+              </a>
+              <code class="overlay-url">/otg_marketplace.html</code>
+            </div>
+          </div>
+        </article>
       </section>
-    </div>
-
-    <!-- IMPORTANT: script.js must live in the same folder as index.html -->
-    <script src="public/script.js"></script>
+    </main>
   </body>
 </html>
