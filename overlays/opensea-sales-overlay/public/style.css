@@ -90,12 +90,14 @@ body {
 }
 
 /* <------ START OPENSEA SECTION ------> */
-/* OpenSea section with animated mesh background (canvas only) */
+/* OpenSea section with animated mesh background (canvas only, full-bleed) */
 #opensea-section {
   position: relative;
   margin-top: 4px;
+  margin-left: -16px;        /* extend past overlay padding */
+  margin-right: -16px;       /* extend past overlay padding */
   padding: 0;                /* full-bleed mesh */
-  border-radius: 10px;
+  border-radius: 0;          /* flush with overlay edges */
   overflow: hidden;
   background: #020617;       /* dark base under the mesh */
 }
@@ -108,7 +110,7 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 0.15;             /* dial this down if it’s too strong */
+  opacity: 0.85;             /* dial this down if it’s too strong */
   mix-blend-mode: screen;    /* lets the grid “glow” into the background */
   pointer-events: none;
 }
@@ -123,7 +125,7 @@ body {
 #high-sale,
 #events,
 #error {
-  padding: 8px 8px 6px 8px;
+  padding: 8px 16px 6px 16px;  /* match overlay horizontal padding */
 }
 
 /* <------ END OPENSEA SECTION ------> */
