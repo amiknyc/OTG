@@ -96,7 +96,7 @@ function initOpenSeaMesh() {
     const waveC = Math.sin((nx + ny) * 2.6 - t * 0.7);
     const h = (waveA + waveB + waveC) / 3; // -1..1
 
-    const amp = Math.min(width, height) * 0.14; // pretty dramatic
+    const amp = Math.min(width, height) * 0.10; // pretty dramatic
 
     const dx = h * amp * nx;
     const dy = h * amp * ny;
@@ -104,11 +104,13 @@ function initOpenSeaMesh() {
     return { x: x0 + dx, y: y0 + dy };
   }
 
-  function draw(timestamp) {
-    if (!canvas.isConnected) return;
+  const SPEED = 0.35; // lower = slower, higher = faster
 
-    const t = timestamp / 1000;
-    ctx.clearRect(0, 0, width, height);
+function draw(timestamp) {
+  if (!canvas.isConnected) return;
+
+  const t = (timestamp / 1000) * SPEED;
+  ctx.clearRect(0, 0, width, height);
 
     // Gradient stroke just for the lines
     const gradient = ctx.createLinearGradient(0, 0, width, height);
