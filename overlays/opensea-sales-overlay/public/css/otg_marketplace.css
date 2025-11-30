@@ -12,8 +12,7 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI", sans-serif;
+  font-family: "Kode Mono", monospace;
   background: transparent;
   color: #e5e7eb;
 }
