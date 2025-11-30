@@ -11,71 +11,236 @@ body {
   padding: 0;
 }
 
-/* Use Kode Mono instead of system-ui */
+/* Use Kode Mono everywhere on this page */
 body {
   font-family: "Kode Mono", monospace;
-  background: transparent;
+  background: transparent; /* let the global dark/static background show */
   color: #e5e7eb;
 }
 
-/* Overlay card for GUN module */
+/* ===== Overlay container ===== */
+
 #gun-overlay {
-  width: 420px;
+  width: 480px;              /* slightly wider for nicer spacing */
   max-width: 100vw;
-  background: #11112b;
-  border-radius: 0;
-  padding: 12px 16px 10px 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+  background: rgba(6, 10, 24, 0.96);
+  border-radius: 0;           /* you said no rounded corners on overlay */
+  padding: 14px 18px 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
 }
 
-/* Headings */
+/* ===== Header / title ===== */
+
 .header {
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #f9fafb;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #e5e7eb;
 }
 
-/* GUN token section with faded background image */
+/* ===== Token section (metrics + sparklines) ===== */
+
 #gun-token-section {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  overflow: hidden;
+  gap: 10px;
 }
 
-#gun-token-section::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("assets/gunzilla-gunz.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.18;
-  filter: saturate(0.7);
-  pointer-events: none;
-  z-index: 0;
-}
+/* --- Main price + cap/vol grid --- */
 
-/* Ensure content is above the background image */
-#gun-token-section > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Metrics block */
 #gun-price {
-  margin-bottom: 0;
+  padding-bottom: 4px;
 }
 
 .gun-metrics {
   display: flex;
   flex-direction: column;
-  gap: 6px
+  gap: 8px;
+}
+
+/* GUN $price + change */
+.gun-metric-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.gun-label {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.gun-price {
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-block;
+  transform-origin: center bottom;
+}
+
+.gun-price.flip-animate {
+  animation: gun-price-flip 0.5s ease-out;
+}
+
+@keyframes gun-price-flip {
+  0% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateX(-90deg);
+    opacity: 0.2;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+.gun-change {
+  font-size: 11px;
+}
+
+.gun-change.positive {
+  color: #4dd9b3;
+}
+
+.gun-change.negative {
+  color: #eb15ae;
+}
+
+/* Cap / Vol row – AiMo-style labels + bold values */
+.gun-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 18px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #9ca3af;
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ===== Sparkline row: Live vs 24H (two-column layout) ===== */
+
+#gun-sparkline {
+  display: flex;
+  gap: 24px;
+  margin-top: 6px;
+}
+
+.sparkline-block {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sparkline-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #9ca3af;
+}
+
+/* The chart box itself */
+.sparkline-chart {
+  height: 40px;
+  padding: 0 10px 2px;
+  box-sizing: border-box;
+}
+
+/* Delta / high / low text below charts */
+.sparkline-stat {
+  font-size: 10px;
+  color: #d1d5db;
+  margin-top: 6px;
+  opacity: 0.9;
+}
+
+.sparkline-stat-line {
+  line-height: 1.6;
+}
+
+/* SVG sizing so lines are not cramped */
+.sparkline-chart svg {
+  width: 100%;
+  height: 150%;
+  display: block;
+}
+
+/* ===== Sparkline visuals (line, area, zero line, end dot) ===== */
+
+.sparkline-path {
+  fill: none;
+  stroke-width: 1.5;
+  stroke: #6b7280;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: spark-draw 1s ease-out forwards;
+}
+
+.sparkline-path.positive {
+  stroke: #4dd9b3;
+}
+
+.sparkline-path.negative {
+  stroke: #eb15ae;
+}
+
+.sparkline-area {
+  fill: rgba(107, 114, 128, 0.22);
+  stroke: none;
+}
+
+.sparkline-area.positive {
+  fill: rgba(77, 217, 179, 0.18);
+}
+
+.sparkline-area.negative {
+  fill: rgba(235, 21, 174, 0.18);
+}
+
+.sparkline-zero-line {
+  stroke: rgba(148, 163, 184, 0.85);
+  stroke-width: 0.6;
+}
+
+.sparkline-end-dot {
+  fill: #4dd9b3;
+  animation: spark-end-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes spark-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spark-end-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
