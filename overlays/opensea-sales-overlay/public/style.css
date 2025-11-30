@@ -110,8 +110,8 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 1;              /* full opacity – we’ll manage alpha in JS */
-  mix-blend-mode: normal;  /* let transparency behave like a proper mask */
+  opacity: 1;
+  mix-blend-mode: normal;
   pointer-events: none;
 }
 
