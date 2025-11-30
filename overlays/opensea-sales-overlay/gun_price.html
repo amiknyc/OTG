@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GUN Token Price</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="public/css/base.css" />
+    <link rel="stylesheet" href="public/css/gun_price.css" />
+  </head>
+  <body>
+    <div id="gun-overlay">
+      <div class="header">
+        <span class="title">GUN Token Price Action</span>
+      </div>
+
+      <section id="gun-token-section">
+        <div id="gun-price"></div>
+
+        <div id="gun-sparkline">
+          <div class="sparkline-block">
+            <div class="sparkline-label">Live (5m updates)</div>
+            <div id="gun-sparkline-live" class="sparkline-chart"></div>
+          </div>
+
+          <div class="sparkline-block">
+            <div class="sparkline-label">Last 24H</div>
+            <div id="gun-sparkline-24h" class="sparkline-chart"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="public/js/gun_price.js"></script>
+  </body>
+</html>
