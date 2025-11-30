@@ -110,7 +110,7 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 1;
+  opacity: 0.9;          /* tweak to taste */
   mix-blend-mode: normal;
   pointer-events: none;
 }
@@ -125,11 +125,6 @@ body {
 /* Session high / ATH row */
 #high-sale {
   padding: 8px 16px 6px 16px;   /* stays aligned with mesh edge */
-}
-
-/* NFT list – inset a bit more than the high cards */
-#events {
-  padding: 0 24px 8px 24px;     /* extra 8px each side */
 }
 
 /* Error line under the list */
@@ -386,7 +381,7 @@ body {
 #events {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 24px 8px 24px;   /* keep the inset + bottom padding */
 }
 
 #events li {

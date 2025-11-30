@@ -75,12 +75,11 @@ function initOpenSeaMesh() {
   window.addEventListener("resize", resize);
   resize();
 
-  // Denser grid = more “fabric” detail
-  const COLS = 40;
-  const ROWS = 40;
+  // Coarser grid so you can clearly see the curvature
+  const COLS = 18;
+  const ROWS = 18;
 
   function point(ix, iy, t) {
-    // base grid in [0,1]
     const u = ix / (COLS - 1);
     const v = iy / (ROWS - 1);
 
@@ -91,34 +90,34 @@ function initOpenSeaMesh() {
     const nx = (u - 0.5) * 2;
     const ny = (v - 0.5) * 2;
 
-    // multi-wave height field for strong warping
-    const waveA = Math.sin(nx * 3.0 + t * 1.4);
-    const waveB = Math.cos(ny * 4.0 - t * 1.1);
-    const waveC = Math.sin((nx + ny) * 3.5 - t * 0.7);
+    // multi-wave displacement field
+    const waveA = Math.sin(nx * 3.0 + t * 1.2);
+    const waveB = Math.cos(ny * 3.4 - t * 0.9);
+    const waveC = Math.sin((nx + ny) * 2.6 - t * 0.7);
     const h = (waveA + waveB + waveC) / 3; // -1..1
 
-    const amp = Math.min(width, height) * 0.10; // displacement amplitude
+    const amp = Math.min(width, height) * 0.14; // pretty dramatic
 
-    // displace in both X and Y based on height + direction from center
     const dx = h * amp * nx;
     const dy = h * amp * ny;
 
-    return {
-      x: x0 + dx,
-      y: y0 + dy
-    };
+    return { x: x0 + dx, y: y0 + dy };
   }
 
   function draw(timestamp) {
     if (!canvas.isConnected) return;
 
-    const t = timestamp / 1000; // seconds
+    const t = timestamp / 1000;
     ctx.clearRect(0, 0, width, height);
 
-    // 1) Draw the mesh in solid white on a transparent canvas
-    ctx.save();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(255, 255, 255, 1)";
+    // Gradient stroke just for the lines
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.95)");   // cyan
+    gradient.addColorStop(0.5, "rgba(129, 140, 248, 0.95)");  // indigo
+    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.95)");   // fuchsia
+
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = gradient;
     ctx.globalCompositeOperation = "source-over";
 
     // horizontal lines
@@ -142,27 +141,13 @@ function initOpenSeaMesh() {
       }
       ctx.stroke();
     }
-    ctx.restore();
-
-    // 2) Apply a gradient only *inside* the stroked pixels (mask)
-    ctx.save();
-    ctx.globalCompositeOperation = "source-in"; // keep only where lines exist
-
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.95)");  // cyan
-    gradient.addColorStop(0.5, "rgba(129, 140, 248, 0.95)"); // indigo
-    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.95)");  // fuchsia
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.restore();
 
     requestAnimationFrame(draw);
   }
 
   requestAnimationFrame(draw);
 }
+
 
 // ==== CORE BOOTSTRAP ====
 
