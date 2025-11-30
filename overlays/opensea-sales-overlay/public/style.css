@@ -110,7 +110,7 @@ body {
   height: 100%;
   display: block;
   z-index: 0;
-  opacity: 0.85;             /* dial this down if it’s too strong */
+  opacity: 0.15;             /* dial this down if it’s too strong */
   mix-blend-mode: screen;    /* lets the grid “glow” into the background */
   pointer-events: none;
 }
@@ -122,10 +122,19 @@ body {
 }
 
 /* Put padding back onto the OpenSea content so it doesn’t hug the edges */
-#high-sale,
-#events,
+/* Session high / ATH row */
+#high-sale {
+  padding: 8px 16px 6px 16px;   /* stays aligned with mesh edge */
+}
+
+/* NFT list – inset a bit more than the high cards */
+#events {
+  padding: 0 24px 8px 24px;     /* extra 8px each side */
+}
+
+/* Error line under the list */
 #error {
-  padding: 8px 16px 6px 16px;  /* match overlay horizontal padding */
+  padding: 0 16px 8px 16px;
 }
 
 /* <------ END OPENSEA SECTION ------> */
