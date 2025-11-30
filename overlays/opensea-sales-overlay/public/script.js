@@ -76,8 +76,8 @@ function initOpenSeaMesh() {
   resize();
 
   // Coarser grid so you can clearly see the curvature
-  const COLS = 18;
-  const ROWS = 18;
+  const COLS = 32;
+  const ROWS = 32;
 
   function point(ix, iy, t) {
     const u = ix / (COLS - 1);
