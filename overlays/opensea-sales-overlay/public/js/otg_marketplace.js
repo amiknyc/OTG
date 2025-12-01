@@ -30,7 +30,7 @@ async function initMarketplaceOverlay() {
   setInterval(fetchEvents, POLL_INTERVAL_MS);
 }
 
-// ==== OPENSEA FLUID MESH BACKGROUND ====
+// ==== OPENSEA LIQUID COLOR BACKGROUND ====
 
 function initOpenSeaMesh() {
   const canvas = document.getElementById("opensea-mesh-canvas");
@@ -55,67 +55,74 @@ function initOpenSeaMesh() {
   window.addEventListener("resize", resize);
   resize();
 
-  const COLS = 40;
-  const ROWS = 40;
-
-  function point(ix, iy, t) {
-    const u = ix / (COLS - 1);
-    const v = iy / (ROWS - 1);
-
-    const x0 = u * width;
-    const y0 = v * height;
-
-    const nx = (u - 0.5) * 2;
-    const ny = (v - 0.5) * 2;
-
-    const waveA = Math.sin(nx * 3.0 + t * 1.2);
-    const waveB = Math.cos(ny * 3.4 - t * 0.9);
-    const waveC = Math.sin((nx + ny) * 2.6 - t * 0.7);
-    const h = (waveA + waveB + waveC) / 3;
-
-    const amp = Math.min(width, height) * 0.1;
-
-    const dx = h * amp * nx;
-    const dy = h * amp * ny;
-
-    return { x: x0 + dx, y: y0 + dy };
-  }
-
-  const SPEED = 0.45;
+  const BASE_FILL = "rgba(3, 7, 18, 0.96)"; // deep slate, keeps it dark
+  const SPEED = 0.00035; // overall animation speed (smaller = slower)
 
   function draw(timestamp) {
     if (!canvas.isConnected) return;
 
-    const t = (timestamp / 1000) * SPEED;
-    ctx.clearRect(0, 0, width, height);
+    const t = timestamp * SPEED;
 
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0.0, "rgba(56, 189, 248, 0.95)");
-    gradient.addColorStop(0.5, "rgba(129, 140, 248, 0.95)");
-    gradient.addColorStop(1.0, "rgba(236, 72, 153, 0.95)");
-
-    ctx.lineWidth = 1.8;
-    ctx.strokeStyle = gradient;
+    // Soft base so the blobs have something to blend into
     ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = BASE_FILL;
+    ctx.fillRect(0, 0, width, height);
 
-    for (let iy = 0; iy < ROWS; iy++) {
-      ctx.beginPath();
-      for (let ix = 0; ix < COLS; ix++) {
-        const p = point(ix, iy, t);
-        if (ix === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-    }
+    // Switch to additive blending so colors feel like light in liquid
+    ctx.globalCompositeOperation = "lighter";
 
-    for (let ix = 0; ix < COLS; ix++) {
-      ctx.beginPath();
-      for (let iy = 0; iy < ROWS; iy++) {
-        const p = point(ix, iy, t);
-        if (iy === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
+    const maxDim = Math.max(width, height);
+    const rBig = maxDim * 0.9;
+    const rMed = maxDim * 0.75;
+    const rSmall = maxDim * 0.6;
+
+    const blobs = [
+      {
+        // cyan / teal blob
+        cx: width * 0.2 + Math.sin(t * 1.4) * width * 0.25,
+        cy: height * 0.3 + Math.cos(t * 1.1) * height * 0.18,
+        r: rBig,
+        inner: "rgba(56, 189, 248, 0.75)",   // cyan-400-ish
+        mid:   "rgba(56, 189, 248, 0.25)",
+        outer: "rgba(15, 23, 42, 0.0)"
+      },
+      {
+        // indigo / violet blob
+        cx: width * 0.75 + Math.cos(t * 0.9 + 1.7) * width * 0.22,
+        cy: height * 0.25 + Math.sin(t * 1.3 + 0.8) * height * 0.22,
+        r: rMed,
+        inner: "rgba(129, 140, 248, 0.80)", // indigo-400-ish
+        mid:   "rgba(129, 140, 248, 0.32)",
+        outer: "rgba(15, 23, 42, 0.0)"
+      },
+      {
+        // magenta / accent blob
+        cx: width * 0.55 + Math.sin(t * 1.1 + 3.4) * width * 0.18,
+        cy: height * 0.7 + Math.cos(t * 0.7 + 2.1) * height * 0.25,
+        r: rSmall,
+        inner: "rgba(236, 72, 153, 0.85)",  // pink-500-ish
+        mid:   "rgba(236, 72, 153, 0.35)",
+        outer: "rgba(15, 23, 42, 0.0)"
       }
-      ctx.stroke();
+    ];
+
+    for (const blob of blobs) {
+      const g = ctx.createRadialGradient(
+        blob.cx,
+        blob.cy,
+        0,
+        blob.cx,
+        blob.cy,
+        blob.r
+      );
+      g.addColorStop(0.0, blob.inner);
+      g.addColorStop(0.45, blob.mid);
+      g.addColorStop(1.0, blob.outer);
+
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(blob.cx, blob.cy, blob.r, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     requestAnimationFrame(draw);
