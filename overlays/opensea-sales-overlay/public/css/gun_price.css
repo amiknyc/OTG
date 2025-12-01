@@ -15,16 +15,71 @@ body {
   padding: 0;
 }
 
-/* Global typography for this page */
+/* Global typography + TV static background for this page */
 body {
   font-family: "Kode Mono", monospace;
-  background: transparent; /* let the global dark/static bg from base.css show */
   color: #e5e7eb;
   line-height: 1.45;
+  background:
+    radial-gradient(circle at top, #111827 0%, #020617 50%, #000000 100%);
+  position: relative;
 
   /* try to keep mono text crisp */
   -webkit-font-smoothing: subpixel-antialiased;
   text-rendering: geometricPrecision;
+}
+
+/* TV static noise overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.04) 0px,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+
+  opacity: 0.22;              /* tune 0.1–0.25 to taste */
+  mix-blend-mode: soft-light;
+  animation: tv-static-jitter 0.5s steps(5) infinite;
+}
+
+/* Static jitter animation */
+@keyframes tv-static-jitter {
+  0% {
+    background-position: 0 0, 0 0;
+    opacity: 0.22;
+  }
+  25% {
+    background-position: 3px -2px, -2px 1px;
+    opacity: 0.16;
+  }
+  50% {
+    background-position: -3px 2px, 2px -3px;
+    opacity: 0.26;
+  }
+  75% {
+    background-position: 1px 3px, -3px -1px;
+    opacity: 0.18;
+  }
+  100% {
+    background-position: 0 0, 0 0;
+    opacity: 0.22;
+  }
 }
 
 /* ===== Outer overlay container ===== */
@@ -35,261 +90,159 @@ body {
   background: rgba(4, 7, 18, 0.98); /* very dark navy */
   border-radius: 0;                  /* no rounded corners for OBS */
   padding: 16px 20px 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.85);
 }
 
-/* ===== Header / title ===== */
+/* Header */
 
 .header {
-  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
 }
 
 .title {
-  font-size: 11px;
-  letter-spacing: 0.24em;
+  font-family: "Major Mono Display", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: rgba(148, 163, 184, 0.9);
 }
 
-/* ===== Inner content card ===== */
+/* Top row: price & change */
 
 #gun-token-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px 16px 12px;
-  background: rgba(15, 23, 42, 0.96); /* slate */
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  padding: 16px 20px 18px;
+  background: radial-gradient(circle at top left, #020617, #020314);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.85);
 }
-
-/* ===== Core metrics block ===== */
 
 #gun-price {
-  padding-bottom: 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.8fr);
+  column-gap: 28px;
+  row-gap: 14px;
 }
 
-.gun-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* Left column: price + mcap + live delta */
 
-/* Main price row */
-.gun-metric-main {
+.main-price-line {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
   margin-bottom: 4px;
 }
 
-.gun-label {
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 10px;
-  color: #6b7280;
-}
-
-.gun-price {
-  font-weight: 700;
-  font-size: 20px; /* focal point */
-  font-variant-numeric: tabular-nums;
-  display: inline-block;
-  transform-origin: center bottom;
-}
-
-/* Flip animation on price change */
-.gun-price.flip-animate {
-  animation: gun-price-flip 0.5s ease-out;
-}
-
-@keyframes gun-price-flip {
-  0% {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
-  50% {
-    transform: rotateX(-90deg);
-    opacity: 0.2;
-  }
-  100% {
-    transform: rotateX(0deg);
-    opacity: 1;
-  }
+.price-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #f9fafb;
 }
 
 .gun-change {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
 }
 
+/* color states for change */
 .gun-change.positive {
-  color: #4dd9b3;
+  color: #4ade80; /* green */
 }
 
 .gun-change.negative {
-  color: #eb15ae;
+  color: #f97373; /* red-ish */
 }
 
-/* Cap / Vol etc. – AiMo-style labels + bold values */
-.gun-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 20px;
+/* De-emphasized time-range text inside brackets */
+.change-range-label {
+  opacity: 0.7;
 }
 
-.metric {
+/* metric rows */
+
+.metric-row {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
 }
 
-.metric-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: #6b7280;
-  margin-bottom: 2px;
+.metric-block {
+  flex: 1;
 }
 
 .metric-value {
-  font-size: 14px;
+  font-size: 0.85rem;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: #e5e7eb;
 }
 
-/* ===== Section divider (metrics vs charts) ===== */
+/* Right column: sparklines + 24h stats */
 
-.section-divider {
-  height: 1px;
-  margin: 6px 0 10px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(148, 163, 184, 0.55),
-    transparent
-  );
-}
-
-/* ===== Sparkline row: Live vs 24H ===== */
-
-#gun-sparkline {
-  display: flex;
-  gap: 22px;
-  margin-top: 2px;
-}
-
-.sparkline-block {
-  flex: 1 1 0;
+.sparkline-row {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+.sparkline-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .sparkline-label {
-  font-size: 10px;
-  text-transform: uppercase;
+  font-size: 0.6rem;
   letter-spacing: 0.16em;
-  color: #9ca3af;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.85);
 }
 
-/* Chart box */
+/* Place the 5m and 24h charts, ensure they don't overlap text */
+
 .sparkline-chart {
-  height: 46px;
-  padding: 0 6px 2px;
-  margin-bottom: 4px; /* push stats further down */
-  box-sizing: border-box;
+  width: 180px;
+  height: 70px;
 }
 
-/* Text stats under the chart (shared baseline) */
-.sparkline-stat {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 6px;
+/* 24h stats text under sparkline */
+
+.stats-24h {
+  font-size: 0.65rem;
+  line-height: 1.4;
+  color: rgba(148, 163, 184, 0.9);
 }
 
-/* Extra spacing specifically to avoid overlap */
-#gun-sparkline-live-stat {
-  margin-top: 14px;   /* more space under the live sparkline */
+/* “Δ1H: …” line at bottom left */
+
+.delta-1h {
+  margin-top: 10px;
+  font-size: 0.65rem;
+  color: rgba(148, 163, 184, 0.9);
 }
 
-#gun-sparkline-24h-stat {
-  margin-top: 10px;   /* still generous gap under the 24H chart */
-}
+/* ================================
+   SPARKLINE STYLES (SVG)
+   ================================ */
 
-.sparkline-stat-line {
-  line-height: 1.6;
-}
-
-/* Optional: highlight only the numeric parts if wrapped in <strong> */
-.sparkline-stat-line strong {
-  color: #4dd9b3;
-  font-weight: 600;
-}
-
-/* SVG sizing */
-.sparkline-chart svg {
+.sparkline-svg {
   width: 100%;
-  height: 150%;
+  height: 100%;
   display: block;
 }
 
-/* ===== Sparkline visuals (line, area, zero-line, end-dot) ===== */
-
-.sparkline-path {
-  fill: none;
-  stroke-width: 1.5;
-  stroke: #6b7280;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-  animation: spark-draw 1s ease-out forwards;
-}
-
-.sparkline-path.positive {
-  stroke: #4dd9b3;
-}
-
-.sparkline-path.negative {
-  stroke: #eb15ae;
-}
-
-.sparkline-area {
-  fill: rgba(107, 114, 128, 0.22);
-  stroke: none;
-}
-
-.sparkline-area.positive {
-  fill: rgba(77, 217, 179, 0.18);
-}
-
-.sparkline-area.negative {
-  fill: rgba(235, 21, 174, 0.18);
-}
-
-.sparkline-zero-line {
-  stroke: rgba(148, 163, 184, 0.85);
-  stroke-width: 0.6;
-}
-
-.sparkline-end-dot {
-  fill: #4dd9b3;
-  animation: spark-end-blink 0.8s ease-in-out infinite;
-}
-
-/* Animations */
-
-@keyframes spark-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes spark-end-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.25;
-  }
-}
+/* 5m sparkline: thin line, blink*
