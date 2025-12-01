@@ -65,19 +65,15 @@ body {
     0 30px 80px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(15, 23, 42, 0.8);
 
-  /* layout: left metrics, right sparklines */
-  display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1.4fr);
-  column-gap: 28px;
+  /* Stack: top metrics, then sparklines row, then stats under each */
+  display: flex;
+  flex-direction: column;
+  row-gap: 14px;
 }
 
-/* Make sure #gun-price and #gun-sparkline occupy the grid slots */
+/* Block that JS fills with price + cap + vol */
 #gun-price {
-  padding-right: 4px;
-}
-
-#gun-sparkline {
-  align-self: stretch;
+  padding-right: 0;
 }
 
 /* ================================
@@ -135,7 +131,6 @@ body {
   text-transform: uppercase;
 }
 
-/* color states for change */
 .gun-change.positive {
   color: #4ade80;
 }
@@ -171,40 +166,23 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Δ1H + subtle sublabel */
-
-.delta-1h {
-  margin-top: 10px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.delta-1h-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
 /* ================================
-   Sparklines side
+   Sparklines row (under price)
    ================================ */
 
 #gun-sparkline {
   display: flex;
-  flex-direction: row;          /* SIDE BY SIDE */
+  flex-direction: row;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;                    /* space between the two sparklines */
-  margin-top: 0;
+  gap: 18px;
 }
 
 .sparkline-block {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1 1 0;                  /* let each block take half of the right column */
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -217,24 +195,24 @@ body {
 
 /* chart box */
 .sparkline-chart {
-  width: 100%;                  /* fill column width */
-  height: 60px;                 /* slightly condensed vertically */
+  width: 100%;
+  height: 60px; /* condensed vertically */
   padding: 0 4px 2px;
   box-sizing: border-box;
 }
 
-/* Text stats under the chart */
+/* Text stats under the chart (Δ1H, 24H change, high, low) */
 .sparkline-stat {
   font-size: 11px;
   color: #9ca3af;
-  margin-top: 6px;              /* extra room to avoid overlap */
+  margin-top: 6px;
 }
 
 .sparkline-stat-line {
   line-height: 1.2;
 }
 
-/* Extra spacing to avoid overlap */
+/* Extra space to keep stats clearly under their sparkline */
 #gun-sparkline-live-stat {
   margin-top: 8px;
 }
@@ -243,15 +221,11 @@ body {
   margin-top: 8px;
 }
 
-/* Stack sparklines vertically on very narrow widths (failsafe) */
+/* Stack sparklines vertically on very small widths */
 @media (max-width: 480px) {
-  #gun-token-section {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 16px;
-  }
-
   #gun-sparkline {
     flex-direction: column;
+    gap: 10px;
   }
 
   .sparkline-chart {
