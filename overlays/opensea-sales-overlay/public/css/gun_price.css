@@ -64,18 +64,8 @@ body {
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(15, 23, 42, 0.8);
-}
 
-/* Inside card: left is metrics, right is sparklines */
-#gun-token-section-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1.4fr);
-  column-gap: 28px;
-}
-
-/* We don’t actually have this wrapper in HTML, but #gun-price + #gun-sparkline
-   are siblings; use flex to create space between them. */
-#gun-token-section {
+  /* layout: left metrics, right sparklines */
   display: grid;
   grid-template-columns: minmax(0, 1.9fr) minmax(0, 1.4fr);
   column-gap: 28px;
@@ -203,15 +193,19 @@ body {
 
 #gun-sparkline {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 2px;
+  flex-direction: row;          /* SIDE BY SIDE */
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;                    /* space between the two sparklines */
+  margin-top: 0;
 }
 
 .sparkline-block {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1 1 0;                  /* let each block take half of the right column */
+  min-width: 0;
 }
 
 .sparkline-label {
@@ -223,9 +217,9 @@ body {
 
 /* chart box */
 .sparkline-chart {
-  width: 200px;
-  height: 70px;
-  padding: 0 6px 2px;
+  width: 100%;                  /* fill column width */
+  height: 60px;                 /* slightly condensed vertically */
+  padding: 0 4px 2px;
   box-sizing: border-box;
 }
 
@@ -233,16 +227,36 @@ body {
 .sparkline-stat {
   font-size: 11px;
   color: #9ca3af;
-  margin-top: 4px;
+  margin-top: 6px;              /* extra room to avoid overlap */
+}
+
+.sparkline-stat-line {
+  line-height: 1.2;
 }
 
 /* Extra spacing to avoid overlap */
 #gun-sparkline-live-stat {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 #gun-sparkline-24h-stat {
   margin-top: 8px;
+}
+
+/* Stack sparklines vertically on very narrow widths (failsafe) */
+@media (max-width: 480px) {
+  #gun-token-section {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 16px;
+  }
+
+  #gun-sparkline {
+    flex-direction: column;
+  }
+
+  .sparkline-chart {
+    height: 64px;
+  }
 }
 
 /* ================================
