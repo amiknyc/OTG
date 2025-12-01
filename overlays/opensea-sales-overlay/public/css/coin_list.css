@@ -33,6 +33,27 @@ body {
     0 0 0 1px rgba(15, 23, 42, 0.9);
 }
 
+/* Background image layer */
+#coin-list-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit; /* match card corners */
+
+  background: url("/public/assets/gunzilla_faded_background.jpg")
+    center/cover no-repeat;
+
+  opacity: 0.15;          /* <-- adjust this for more/less image visibility */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure content sits above the image layer */
+#coin-list-section > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Header: title + LIVE on same row */
 .header {
   margin-bottom: 12px;
