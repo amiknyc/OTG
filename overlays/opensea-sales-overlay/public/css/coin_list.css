@@ -171,6 +171,10 @@ body {
   justify-content: flex-start;
 }
 
+.asset-symbol {
+  margin-right: 6px;        /* space between BTC and Bitcoin */
+}
+
 .col-price,
 .col-change,
 .col-volume {
