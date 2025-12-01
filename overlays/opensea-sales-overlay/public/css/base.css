@@ -14,82 +14,76 @@
   --radius-md: 8px;
 }
 
-/* ===========================
-   GLOBAL DARK BACKGROUND + STATIC
-   =========================== */
+/* ===== Global dark static background ===== */
 
 html,
 body {
+  height: 100%;
   margin: 0;
   padding: 0;
-  min-height: 100%;
   background:
-    radial-gradient(circle at top, #111827 0%, #020617 50%, #000000 100%);
+    radial-gradient(circle at top, #111827 0%, #020617 45%, #000000 100%);
   color: #e5e7eb;
-}
-
-body {
-  position: relative;
   font-family: "Kode Mono", monospace;
+  position: relative;
 }
 
-/* Animated TV-static noise overlay */
+/* TV-static grain overlay (now actually animated) */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
 
   background-image:
     repeating-linear-gradient(
       0deg,
-      rgba(255, 255, 255, 0.04) 0px,
-      rgba(255, 255, 255, 0.04) 1px,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
       transparent 1px,
       transparent 3px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.025) 0px,
-      rgba(255, 255, 255, 0.025) 1px,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 1px,
       transparent 1px,
       transparent 3px
     );
 
-  opacity: 0.18;             /* dial 0.10–0.25 to taste */
+  opacity: 0.16;                /* tune 0.10–0.25 if you want it louder/softer */
   mix-blend-mode: soft-light;
+  z-index: 0;                    /* sit above background but below content */
+
+  /* TV static jitter – discrete frames so it feels like noise, not a smooth pan */
   animation: tv-static-jitter 0.55s steps(5) infinite;
 }
 
-/* TV-static jitter */
+/* Jitter just the background-position + slight opacity wiggle */
 @keyframes tv-static-jitter {
   0% {
     background-position: 0 0, 0 0;
-    opacity: 0.18;
+    opacity: 0.16;
   }
   25% {
     background-position: 3px -2px, -2px 1px;
-    opacity: 0.14;
+    opacity: 0.13;
   }
   50% {
     background-position: -3px 2px, 2px -3px;
-    opacity: 0.22;
+    opacity: 0.20;
   }
   75% {
     background-position: 1px 3px, -3px -1px;
-    opacity: 0.16;
+    opacity: 0.14;
   }
   100% {
     background-position: 0 0, 0 0;
-    opacity: 0.18;
+    opacity: 0.16;
   }
 }
 
-/* ===========================
-   SHARED UTILITIES
-   =========================== */
-
+/* Glassy card */
 .module-card {
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -109,7 +103,7 @@ body::before {
 .gap-sm      { gap: var(--space-sm); }
 .gap-md      { gap: var(--space-md); }
 
-/* typography helper – only if you explicitly use class="body" */
+/* typography helper for any element you explicitly give class="body" */
 .body {
   font-family: "Kode Mono", monospace;
   color: var(--text-primary);
