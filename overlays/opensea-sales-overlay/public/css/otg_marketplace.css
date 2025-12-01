@@ -1,4 +1,7 @@
-/* Reset + OBS-friendly background */
+/* ================================
+   RESET + BASE
+   ================================ */
+
 *,
 *::before,
 *::after {
@@ -14,78 +17,80 @@ body {
 body {
   font-family: "Kode Mono", monospace;
   background: transparent;
-  color: #f4f4f5; /* brighter base text */
+  color: #f4f4f5;
+  line-height: 1.45;
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: geometricPrecision;
 }
 
-/* Overlay card for marketplace module */
+/* ================================
+   OUTER OVERLAY CONTAINER
+   ================================ */
+
 #market-overlay {
-  width: 420px;
+  width: 520px;
   max-width: 100vw;
-  background: #11112b;
-  border-radius: 0;
-  padding: 12px 16px 10px 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
+  padding: 18px 20px 16px;
+  box-shadow:
+    0 32px 90px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
 }
 
-/* Headings */
+/* Header text (matches GUN TOKEN PRICE ACTION) */
+
 .subheader {
-  margin-top: 0;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .subtitle {
-  font-size: 16px;              /* larger like GUN header */
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: none;
+  font-family: "Kode Mono", monospace;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: #e5e7eb;
 }
 
-/* OpenSea section with animated mesh background */
+/* ================================
+   OPENSEA CARD (MATCH GUN CARD)
+   ================================ */
+
 #opensea-section {
   position: relative;
-  margin-top: 4px;
-  margin-left: -16px;
-  margin-right: -16px;
-  padding: 0;
-  border-radius: 0;
+  border-radius: 18px;
+  padding: 14px 18px 10px;
+  background: radial-gradient(circle at top left, #020617, #020314);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(15, 23, 42, 0.8);
   overflow: hidden;
-  background: #020617;
 }
 
-/* Full-bleed canvas */
+/* Mesh canvas as a subtle layer under content */
+
 #opensea-mesh-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
-  z-index: 0;
-  opacity: 0.1;
+  opacity: 0.10;
   mix-blend-mode: normal;
   pointer-events: none;
+  z-index: 0;
 }
 
-/* Ensure data sits above mesh */
+/* Ensure content sits above the mesh */
+
 #opensea-section > :not(#opensea-mesh-canvas) {
   position: relative;
   z-index: 1;
 }
 
-/* Session high / ATH row */
-#high-sale {
-  padding: 8px 16px 6px 16px;
-}
+/* ================================
+   SESSION HIGH / ALL-TIME HIGH
+   ================================ */
 
-/* Error line */
-#error {
-  padding: 0 16px 8px 16px;
-  margin-top: 6px;
-  font-size: 11px;
-  color: #eb15ae;
-}
-
-/* High sale cards */
 #high-sale {
   display: flex;
   flex-direction: row;
@@ -100,9 +105,9 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(15, 23, 42, 0.96);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.75);
 }
 
 .high-thumb-wrapper {
@@ -130,8 +135,8 @@ body {
 .high-label {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(203, 213, 225, 0.95); /* brighter */
+  letter-spacing: 0.14em;
+  color: rgba(203, 213, 225, 0.9);
 }
 
 .high-value {
@@ -140,23 +145,35 @@ body {
   color: #f9fafb;
 }
 
-/* Events list */
+/* Error line */
+
+#error {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #eb15ae;
+}
+
+/* ================================
+   EVENTS LIST
+   ================================ */
+
 #events {
   list-style: none;
-  margin: 0;
-  padding: 0 24px 8px 24px;
+  margin: 4px 0 2px 0;
+  padding: 0;
 }
 
 #events li {
   padding: 8px 0;
-  border-top: 1px solid rgba(55, 65, 81, 0.75);
+  border-top: 1px solid rgba(55, 65, 81, 0.8);
 }
 
 #events li:first-child {
   border-top: none;
 }
 
-/* Marketplace event layout */
+/* Card layout per event */
+
 .event-card {
   display: flex;
   gap: 8px;
@@ -182,6 +199,8 @@ body {
   background: rgba(31, 41, 55, 0.8);
 }
 
+/* Right-hand text block */
+
 .event-main {
   flex: 1 1 auto;
   display: flex;
@@ -190,24 +209,19 @@ body {
   min-width: 0;
 }
 
-.event-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
 /* Line 1: item name */
+
 .item-name {
-  font-size: 13px;                   /* slightly larger */
+  font-size: 13px;
   font-weight: 500;
-  color: #f3f4f6;                     /* brighter */
+  color: #f3f4f6;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* Line 2: SALE + price */
+
 .sale-line {
   display: flex;
   align-items: baseline;
@@ -226,17 +240,6 @@ body {
   animation: sale-blink 1s step-start 5;
 }
 
-@keyframes sale-blink {
-  0%,
-  40% {
-    opacity: 1;
-  }
-  40.01%,
-  100% {
-    opacity: 0.25;
-  }
-}
-
 .sale-price {
   font-weight: 500;
   color: #e5e7eb;
@@ -251,9 +254,10 @@ body {
 }
 
 /* Line 3 & 4 */
+
 .datetime-line {
   font-size: 11px;
-  color: #cbd5f5;     /* brighter muted text */
+  color: #cbd5f5;
 }
 
 .direction-line {
@@ -261,7 +265,10 @@ body {
   color: #e5e7eb;
 }
 
-/* Rarity pills */
+/* ================================
+   RARITY PILL STYLING
+   ================================ */
+
 .rarity-pill {
   font-size: 10px;
   padding: 2px 6px;
@@ -271,40 +278,68 @@ body {
   white-space: nowrap;
 }
 
-/* Rarity color tweaks with brighter text */
+/* Common */
+
 .rarity-common .item-name {
   color: #f9fafb;
 }
+
 .rarity-common .rarity-pill {
-  background: rgba(156, 163, 175, 0.2);
+  background: rgba(156, 163, 175, 0.22);
   color: #e5e7eb;
 }
 
-.rarity-uncommon .rarity-pill {
-  background: rgba(34, 197, 94, 0.23);
-  color: #6ee7b7;
-}
+/* Uncommon */
+
 .rarity-uncommon .item-name {
   color: #6ee7b7;
 }
 
-.rarity-rare .rarity-pill {
-  background: rgba(59, 130, 246, 0.23);
-  color: #93c5fd;
+.rarity-uncommon .rarity-pill {
+  background: rgba(34, 197, 94, 0.22);
+  color: #6ee7b7;
 }
+
+/* Rare */
+
 .rarity-rare .item-name {
   color: #93c5fd;
 }
 
-.rarity-epic .rarity-pill {
-  background: rgba(168, 85, 247, 0.25);
-  color: #e9d5ff;
+.rarity-rare .rarity-pill {
+  background: rgba(59, 130, 246, 0.22);
+  color: #60a5fa;
 }
+
+/* Epic */
+
 .rarity-epic .item-name {
+  color: #c4b5fd;
+}
+
+.rarity-epic .rarity-pill {
+  background: rgba(168, 85, 247, 0.22);
   color: #e9d5ff;
 }
 
+/* Fallback / other */
+
 .rarity-other .rarity-pill {
-  background: rgba(75, 85, 99, 0.35);
+  background: rgba(75, 85, 99, 0.3);
   color: #e5e7eb;
+}
+
+/* ================================
+   ANIMATIONS
+   ================================ */
+
+@keyframes sale-blink {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  40.01%,
+  100% {
+    opacity: 0.25;
+  }
 }
