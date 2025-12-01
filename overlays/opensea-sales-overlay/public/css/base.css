@@ -34,8 +34,8 @@ body {
 .cryptohaki-logo {
   font-family: "Major Mono Display", monospace;
   font-size: 1.6rem;           /* tweak to taste */
-  letter-spacing: 0.25em;      /* gives that spaced-out logo feel */
-  text-transform: lowercase;   /* keeps it in that minimal style */
+  letter-spacing: 0.25em;      /* spaced-out logo feel */
+  text-transform: lowercase;
   line-height: 1;
 }
 
@@ -49,51 +49,52 @@ body::before {
   background-image:
     repeating-linear-gradient(
       0deg,
-      rgba(255, 255, 255, 0.025) 0px,
-      rgba(255, 255, 255, 0.025) 1px,
+      rgba(255, 255, 255, 0.028) 0px,
+      rgba(255, 255, 255, 0.028) 1px,
       transparent 1px,
       transparent 3px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.02) 0px,
-      rgba(255, 255, 255, 0.02) 1px,
+      rgba(255, 255, 255, 0.022) 0px,
+      rgba(255, 255, 255, 0.022) 1px,
       transparent 1px,
       transparent 3px
     );
 
-  opacity: 0.15;
+  opacity: 0.18;
   mix-blend-mode: soft-light;
   z-index: -1;
 
-  /* animated static jitter */
-  animation: cryptohaki-static-jitter 0.8s steps(4) infinite;
+  /* TV-static style jitter */
+  animation: tv-static-jitter 0.7s steps(4) infinite;
 }
 
-/* TV-static style jitter – keep it subtle */
-@keyframes cryptohaki-static-jitter {
+/* Static jitter animation */
+@keyframes tv-static-jitter {
   0% {
     background-position: 0 0, 0 0;
-    opacity: 0.16;
+    opacity: 0.18;
   }
   25% {
-    background-position: 2px -1px, -1px 1px;
-    opacity: 0.12;
+    background-position: 2px -2px, -1px 1px;
+    opacity: 0.14;
   }
   50% {
     background-position: -2px 1px, 1px -2px;
-    opacity: 0.18;
+    opacity: 0.22;
   }
   75% {
     background-position: 1px 2px, -2px -1px;
-    opacity: 0.13;
+    opacity: 0.16;
   }
   100% {
     background-position: 0 0, 0 0;
-    opacity: 0.16;
+    opacity: 0.18;
   }
 }
 
+/* Glassy card modules */
 .module-card {
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -106,14 +107,14 @@ body::before {
 }
 
 /* simple flex utilities */
-.flex       { display: flex; }
-.flex-row   { flex-direction: row; }
-.flex-col   { flex-direction: column; }
-.flex-center{ align-items: center; justify-content: center; }
-.gap-sm     { gap: var(--space-sm); }
-.gap-md     { gap: var(--space-md); }
+.flex        { display: flex; }
+.flex-row    { flex-direction: row; }
+.flex-col    { flex-direction: column; }
+.flex-center { align-items: center; justify-content: center; }
+.gap-sm      { gap: var(--space-sm); }
+.gap-md      { gap: var(--space-md); }
 
-/* typography */
+/* typography helper – if you ever use <div class="body"> */
 .body {
   font-family: "Kode Mono", monospace;
   color: var(--text-primary);
