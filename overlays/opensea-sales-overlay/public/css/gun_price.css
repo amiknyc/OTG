@@ -61,7 +61,7 @@ body {
   padding: 16px 18px 14px;
   background:
     radial-gradient(circle at top left, rgba(2, 6, 23, 0.55), rgba(2, 3, 20, 0.85)),
-    url("/assets/gunzilla_faded_background.jpg"); /* or the full Vercel Assets URL */
+    url("/public/assets/gunzilla_faded_background.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -73,7 +73,6 @@ body {
   flex-direction: column;
   row-gap: 14px;
 }
-
 
 /* Block that JS fills with price + cap + vol */
 #gun-price {
