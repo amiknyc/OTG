@@ -109,3 +109,16 @@ body::before {
   color: var(--text-primary);
   background: transparent;
 }
+
+/* === Disable global page background & static on overlays === */
+
+html,
+body {
+  background: transparent !important;
+  position: static;
+}
+
+body::before {
+  content: none !important;
+  background: none !important;
+}
