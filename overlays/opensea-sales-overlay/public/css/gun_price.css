@@ -129,10 +129,10 @@ body {
 .gun-label::before {
   content: "";
   position: absolute;
-  left: 50%;
+  left: 63%;
   top: 50%;
-  width: 32px;             /* adjust size as needed */
-  height: 32px;
+  width: 50px;             /* adjust size as needed */
+  height: 50px;
   transform: translate(-50%, -55%); /* center under text, nudged up slightly */
 
   background: url("/public/assets/tokens/gun.webp")
