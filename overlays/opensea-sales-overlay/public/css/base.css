@@ -15,7 +15,7 @@
 }
 
 /* ===========================
-   GLOBAL DARK + STATIC BACKGROUND
+   GLOBAL DARK BACKGROUND + STATIC
    =========================== */
 
 html,
@@ -24,16 +24,16 @@ body {
   padding: 0;
   min-height: 100%;
   background:
-    radial-gradient(circle at top, #111827 0%, #020617 45%, #000000 100%);
+    radial-gradient(circle at top, #111827 0%, #020617 50%, #000000 100%);
   color: #e5e7eb;
-  font-family: "Kode Mono", monospace;
 }
 
 body {
   position: relative;
+  font-family: "Kode Mono", monospace;
 }
 
-/* Animated TV-static overlay */
+/* Animated TV-static noise overlay */
 body::before {
   content: "";
   position: fixed;
@@ -41,7 +41,6 @@ body::before {
   pointer-events: none;
   z-index: 0;
 
-  /* layered “noise” */
   background-image:
     repeating-linear-gradient(
       0deg,
@@ -58,50 +57,39 @@ body::before {
       transparent 3px
     );
 
-  opacity: 0.22;              /* if this is too strong, drop to 0.10–0.15 */
+  opacity: 0.18;             /* dial 0.10–0.25 to taste */
   mix-blend-mode: soft-light;
-
-  animation: tv-static-jitter 0.5s steps(5) infinite;
+  animation: tv-static-jitter 0.55s steps(5) infinite;
 }
 
-/* TV static jitter */
+/* TV-static jitter */
 @keyframes tv-static-jitter {
   0% {
     background-position: 0 0, 0 0;
-    opacity: 0.22;
+    opacity: 0.18;
   }
   25% {
     background-position: 3px -2px, -2px 1px;
-    opacity: 0.16;
+    opacity: 0.14;
   }
   50% {
     background-position: -3px 2px, 2px -3px;
-    opacity: 0.26;
+    opacity: 0.22;
   }
   75% {
     background-position: 1px 3px, -3px -1px;
-    opacity: 0.18;
+    opacity: 0.16;
   }
   100% {
     background-position: 0 0, 0 0;
-    opacity: 0.22;
+    opacity: 0.18;
   }
 }
 
 /* ===========================
-   SHARED COMPONENT STYLES
+   SHARED UTILITIES
    =========================== */
 
-/* Brand / header logo: "cryptohaki" */
-.cryptohaki-logo {
-  font-family: "Major Mono Display", monospace;
-  font-size: 1.6rem;
-  letter-spacing: 0.25em;
-  text-transform: lowercase;
-  line-height: 1;
-}
-
-/* Glassy card modules (if you reuse them) */
 .module-card {
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -121,7 +109,7 @@ body::before {
 .gap-sm      { gap: var(--space-sm); }
 .gap-md      { gap: var(--space-md); }
 
-/* typography helper – only used if you add class="body" somewhere */
+/* typography helper – only if you explicitly use class="body" */
 .body {
   font-family: "Kode Mono", monospace;
   color: var(--text-primary);
