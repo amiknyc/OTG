@@ -59,13 +59,18 @@ body {
 #gun-token-section {
   border-radius: 18px;
   padding: 16px 18px 14px;
-  background: radial-gradient(circle at top left, #020617, #020314);
+  /* image at the back, gradient on top for darkening */
+  background:
+    radial-gradient(circle at top left, rgba(2, 6, 23, 0.96), rgba(2, 3, 20, 0.98)),
+    url("/assets/gunzilla_faded_background.jpg");
+  background-size: cover;          /* image covers the whole card */
+  background-position: center;     /* center the image */
+  background-repeat: no-repeat;
   border: 1px solid rgba(148, 163, 184, 0.22);
   box-shadow:
     0 30px 80px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(15, 23, 42, 0.8);
 
-  /* Stack: top metrics, then sparklines row, then stats under each */
   display: flex;
   flex-direction: column;
   row-gap: 14px;
@@ -196,8 +201,8 @@ body {
 /* chart box */
 .sparkline-chart {
   width: 90%;
-  height: 60px; /* condensed vertically */
-  padding: 0 0px 4px 2px;
+  height: 45px; /* condensed vertically */
+  padding: 0px 0px 0px 0px;
   box-sizing: border-box;
 }
 
@@ -209,7 +214,7 @@ body {
 }
 
 .sparkline-stat-line {
-  line-height: 1.2;
+  line-height: 1.5;
 }
 
 /* Extra space to keep stats clearly under their sparkline */
