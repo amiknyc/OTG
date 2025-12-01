@@ -45,11 +45,11 @@ body {
 }
 
 .title {
-  font-family: "Kode Mono", monospace;   /* use Kode here */
-  font-size: 11px;
-  letter-spacing: 0.18em;                /* optional: slightly tighter */
+  font-family: "Kode Mono", monospace;
+  font-size: 14px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.9);
+  color: #e5e7eb;
 }
 
 /* ================================
