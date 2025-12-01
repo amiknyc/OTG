@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Multi-Coin 1H Snapshot</title>
+    <title>Market Watch – 1H Snapshot</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!-- Fonts (same as GUN overlay) -->
@@ -17,17 +17,19 @@
     <link rel="stylesheet" href="public/css/coin_list.css" />
   </head>
   <body>
-    <div class="overlay-root">
-      <section class="coin-list-module">
-        <header class="coin-list-header">
-          <div class="coin-list-title">
-            <span class="title-main">MARKET WATCH</span>
-            <span class="title-sub">1H SNAPSHOT</span>
-          </div>
+    <div id="coin-overlay">
+      <!-- OUTER HEADER (matches GUN module pattern) -->
+      <div class="header">
+        <span class="title">Market Watch – 1H Snapshot</span>
+      </div>
+
+      <!-- INNER CARD -->
+      <section id="coin-list-section" class="coin-list-module">
+        <div class="coin-list-header">
           <div class="coin-list-meta">
             <span class="meta-pill">LIVE</span>
           </div>
-        </header>
+        </div>
 
         <div class="coin-list-table">
           <div class="coin-list-table-head">
