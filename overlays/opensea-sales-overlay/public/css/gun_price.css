@@ -135,7 +135,7 @@ body {
   height: 32px;
   transform: translate(-50%, -55%); /* center under text, nudged up slightly */
 
-  background: url("/public/assets/gun_token.webp")
+  background: url("/public/assets/tokens/gun.webp")
     center / contain no-repeat;
 
   opacity: 0.22;           /* stronger/weaker presence: 0.15–0.35 is a good range */
