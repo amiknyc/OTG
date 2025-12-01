@@ -112,20 +112,38 @@ body {
   gap: 14px;
 }
 
-/* Top row: GUN + price + change */
+/* === GUN label with faded token icon behind text === */
 
 .gun-metric-main {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 2px;
+  position: relative; /* ensure a sane stacking context for the label + icon */
 }
 
 .gun-label {
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 10px;
-  color: #6b7280;
+  position: relative;
+  z-index: 1;              /* keep the text above the icon */
+  padding: 2px 8px;        /* tiny padding so the icon has room under the word */
+  line-height: 1.3;
+}
+
+/* Faded token icon behind "GUN" */
+.gun-label::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 32px;             /* adjust size as needed */
+  height: 32px;
+  transform: translate(-50%, -55%); /* center under text, nudged up slightly */
+
+  background: url("/public/assets/gun_token.webp")
+    center / contain no-repeat;
+
+  opacity: 0.22;           /* stronger/weaker presence: 0.15–0.35 is a good range */
+  pointer-events: none;
+  z-index: -1;             /* sit behind the text but inside the label box */
+
+  /* optional: a bit of shadow so it doesn’t wash out */
+  filter: drop-shadow(0 0 6px rgba(15, 23, 42, 0.9));
 }
 
 .gun-price {
