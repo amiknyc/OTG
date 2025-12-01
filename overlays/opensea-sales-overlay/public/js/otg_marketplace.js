@@ -2,7 +2,7 @@
 
 const COLLECTION_SLUG = "off-the-grid";
 const POLL_INTERVAL_MS = 60000;
-const MAX_ITEMS = 10;
+const MAX_ITEMS = 6;
 const API_PATH = "/api/opensea-sales.js";
 
 const DAY_SECONDS = 24 * 60 * 60;
