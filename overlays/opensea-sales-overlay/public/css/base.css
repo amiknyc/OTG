@@ -39,7 +39,7 @@ body {
   line-height: 1;
 }
 
-/* Static “grain” overlay */
+/* Static “grain” overlay – now animated */
 body::before {
   content: "";
   position: fixed;
@@ -65,6 +65,33 @@ body::before {
   opacity: 0.15;
   mix-blend-mode: soft-light;
   z-index: -1;
+
+  /* animated static jitter */
+  animation: cryptohaki-static-jitter 0.8s steps(4) infinite;
+}
+
+/* TV-static style jitter – keep it subtle */
+@keyframes cryptohaki-static-jitter {
+  0% {
+    background-position: 0 0, 0 0;
+    opacity: 0.16;
+  }
+  25% {
+    background-position: 2px -1px, -1px 1px;
+    opacity: 0.12;
+  }
+  50% {
+    background-position: -2px 1px, 1px -2px;
+    opacity: 0.18;
+  }
+  75% {
+    background-position: 1px 2px, -2px -1px;
+    opacity: 0.13;
+  }
+  100% {
+    background-position: 0 0, 0 0;
+    opacity: 0.16;
+  }
 }
 
 .module-card {
@@ -93,4 +120,3 @@ body::before {
   /* Do NOT override the global gradient background */
   background: transparent;
 }
-
