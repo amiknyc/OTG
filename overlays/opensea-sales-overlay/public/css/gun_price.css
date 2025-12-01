@@ -45,9 +45,9 @@ body {
 }
 
 .title {
-  font-family: "Major Mono Display", monospace;
+  font-family: "Kode Mono", monospace;   /* use Kode here */
   font-size: 11px;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.18em;                /* optional: slightly tighter */
   text-transform: uppercase;
   color: rgba(148, 163, 184, 0.9);
 }
@@ -195,9 +195,9 @@ body {
 
 /* chart box */
 .sparkline-chart {
-  width: 100%;
+  width: 90%;
   height: 60px; /* condensed vertically */
-  padding: 0 4px 2px;
+  padding: 0 0px 4px 2px;
   box-sizing: border-box;
 }
 
