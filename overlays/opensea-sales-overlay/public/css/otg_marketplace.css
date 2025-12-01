@@ -76,7 +76,7 @@ body {
   display: block;
 
   /* Stronger presence than the old grid, but still behind content */
-  opacity: 0.28;
+  opacity: 0.15;
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 0;
@@ -109,6 +109,7 @@ body {
   padding: 6px 8px;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.35); /* subtle 1px outline */
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.75);
 }
 
