@@ -14,7 +14,9 @@
   --radius-md: 8px;
 }
 
-/* ===== Global dark static background ===== */
+/* ===========================
+   GLOBAL DARK + STATIC BACKGROUND
+   =========================== */
 
 html,
 body {
@@ -31,6 +33,65 @@ body {
   position: relative;
 }
 
+/* Animated TV-static overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+
+  /* layered “noise” */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.04) 0px,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+
+  opacity: 0.22;              /* if this is too strong, drop to 0.10–0.15 */
+  mix-blend-mode: soft-light;
+
+  animation: tv-static-jitter 0.5s steps(5) infinite;
+}
+
+/* TV static jitter */
+@keyframes tv-static-jitter {
+  0% {
+    background-position: 0 0, 0 0;
+    opacity: 0.22;
+  }
+  25% {
+    background-position: 3px -2px, -2px 1px;
+    opacity: 0.16;
+  }
+  50% {
+    background-position: -3px 2px, 2px -3px;
+    opacity: 0.26;
+  }
+  75% {
+    background-position: 1px 3px, -3px -1px;
+    opacity: 0.18;
+  }
+  100% {
+    background-position: 0 0, 0 0;
+    opacity: 0.22;
+  }
+}
+
+/* ===========================
+   SHARED COMPONENT STYLES
+   =========================== */
+
 /* Brand / header logo: "cryptohaki" */
 .cryptohaki-logo {
   font-family: "Major Mono Display", monospace;
@@ -40,64 +101,7 @@ body {
   line-height: 1;
 }
 
-/* Static “grain” overlay – animated */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-
-  /* pixel-style noise */
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.03) 0px,
-      rgba(255, 255, 255, 0.03) 1px,
-      transparent 1px,
-      transparent 3px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.02) 0px,
-      rgba(255, 255, 255, 0.02) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-
-  opacity: 0.18;
-  mix-blend-mode: soft-light;
-  z-index: 0;
-
-  /* TV-static style jitter */
-  animation: tv-static-jitter 0.6s steps(4) infinite;
-}
-
-/* Make it really obvious while tuning:
-   if it feels too strong, lower opacity to ~0.08 */
-@keyframes tv-static-jitter {
-  0% {
-    background-position: 0 0, 0 0;
-    opacity: 0.20;
-  }
-  25% {
-    background-position: 2px -2px, -1px 1px;
-    opacity: 0.14;
-  }
-  50% {
-    background-position: -2px 1px, 1px -2px;
-    opacity: 0.24;
-  }
-  75% {
-    background-position: 1px 2px, -2px -1px;
-    opacity: 0.16;
-  }
-  100% {
-    background-position: 0 0, 0 0;
-    opacity: 0.20;
-  }
-}
-
-/* Glassy card modules */
+/* Glassy card modules (if you reuse them) */
 .module-card {
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -117,7 +121,7 @@ body::before {
 .gap-sm      { gap: var(--space-sm); }
 .gap-md      { gap: var(--space-md); }
 
-/* typography helper – used only if you add class="body" somewhere */
+/* typography helper – only used if you add class="body" somewhere */
 .body {
   font-family: "Kode Mono", monospace;
   color: var(--text-primary);
