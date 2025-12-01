@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Multi-Coin 1H Snapshot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Fonts (same as GUN overlay) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&family=Major+Mono+Display&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="public/css/base.css" />
+    <link rel="stylesheet" href="public/css/coin_list.css" />
+  </head>
+  <body>
+    <div class="overlay-root">
+      <section class="coin-list-module">
+        <header class="coin-list-header">
+          <div class="coin-list-title">
+            <span class="title-main">MARKET WATCH</span>
+            <span class="title-sub">1H SNAPSHOT</span>
+          </div>
+          <div class="coin-list-meta">
+            <span class="meta-pill">LIVE</span>
+          </div>
+        </header>
+
+        <div class="coin-list-table">
+          <div class="coin-list-table-head">
+            <div class="col col-asset">ASSET</div>
+            <div class="col col-price">PRICE</div>
+            <div class="col col-change">1H Δ</div>
+            <div class="col col-volume">VOL 1H*</div>
+          </div>
+
+          <div class="coin-list-table-body">
+            <!-- BTC -->
+            <div class="coin-row" data-coin-symbol="BTC">
+              <div class="col col-asset">
+                <div class="asset-symbol">BTC</div>
+                <div class="asset-name">Bitcoin</div>
+              </div>
+              <div class="col col-price">
+                <span class="metric-value coin-price">--</span>
+              </div>
+              <div class="col col-change">
+                <span class="metric-value coin-change">--</span>
+              </div>
+              <div class="col col-volume">
+                <span class="metric-value coin-volume">--</span>
+              </div>
+            </div>
+
+            <!-- ETH -->
+            <div class="coin-row" data-coin-symbol="ETH">
+              <div class="col col-asset">
+                <div class="asset-symbol">ETH</div>
+                <div class="asset-name">Ethereum</div>
+              </div>
+              <div class="col col-price">
+                <span class="metric-value coin-price">--</span>
+              </div>
+              <div class="col col-change">
+                <span class="metric-value coin-change">--</span>
+              </div>
+              <div class="col col-volume">
+                <span class="metric-value coin-volume">--</span>
+              </div>
+            </div>
+
+            <!-- SOL -->
+            <div class="coin-row" data-coin-symbol="SOL">
+              <div class="col col-asset">
+                <div class="asset-symbol">SOL</div>
+                <div class="asset-name">Solana</div>
+              </div>
+              <div class="col col-price">
+                <span class="metric-value coin-price">--</span>
+              </div>
+              <div class="col col-change">
+                <span class="metric-value coin-change">--</span>
+              </div>
+              <div class="col col-volume">
+                <span class="metric-value coin-volume">--</span>
+              </div>
+            </div>
+
+            <!-- AVAX -->
+            <div class="coin-row" data-coin-symbol="AVAX">
+              <div class="col col-asset">
+                <div class="asset-symbol">AVAX</div>
+                <div class="asset-name">Avalanche</div>
+              </div>
+              <div class="col col-price">
+                <span class="metric-value coin-price">--</span>
+              </div>
+              <div class="col col-change">
+                <span class="metric-value coin-change">--</span>
+              </div>
+              <div class="col col-volume">
+                <span class="metric-value coin-volume">--</span>
+              </div>
+            </div>
+
+            <!-- HYPE -->
+            <div class="coin-row" data-coin-symbol="HYPE">
+              <div class="col col-asset">
+                <div class="asset-symbol">HYPE</div>
+                <div class="asset-name">Hype</div>
+              </div>
+              <div class="col col-price">
+                <span class="metric-value coin-price">--</span>
+              </div>
+              <div class="col col-change">
+                <span class="metric-value coin-change">--</span>
+              </div>
+              <div class="col col-volume">
+                <span class="metric-value coin-volume">--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="coin-list-footer">
+          <span class="footnote">
+            *VOL 1H is approximated from 24H volume for now.
+          </span>
+        </footer>
+      </section>
+    </div>
+
+    <script src="public/js/coin_list.js"></script>
+  </body>
+</html>
