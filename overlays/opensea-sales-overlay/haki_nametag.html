@@ -2,28 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>cryptohaki Logo</title>
+  <title>cryptohaki Nametag</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    /* ===== PAGE LAYOUT ===== */
-    html, body {
+    /* ===== PAGE LAYOUT – TRANSPARENT BACKGROUND ===== */
+    html,
+    body {
       margin: 0;
       padding: 0;
       height: 100%;
       width: 100%;
-      background: #000; /* match your stream background */
+      background: transparent;          /* key change */
+      background-color: transparent;    /* for safety */
       overflow: hidden;
     }
 
     body {
       display: flex;
       justify-content: center;
-      align-items: flex-end; /* put it near bottom like your screenshot */
+      align-items: flex-end; /* bottom of frame */
       padding-bottom: 40px;
     }
 
-    /* ===== FONT FACE (update paths to your actual font files) ===== */
+    /* ===== FONT FACE (update paths if needed) ===== */
     @font-face {
       font-family: "Magneto";
       src: url("/public/fonts/MAGNETOB.woff") format("woff");
@@ -41,7 +43,7 @@
       text-transform: lowercase;
       margin: 0;
 
-      /* animated dark-steel gradient similar to your overlay */
+      /* animated gradient fill */
       background: linear-gradient(
         120deg,
         #020617,
@@ -74,6 +76,6 @@
   </style>
 </head>
 <body>
-  <h1 class="cryptohaki-logo">cryptohaki--</h1>
+  <h1 class="cryptohaki-logo">cryptohaki</h1>
 </body>
 </html>
