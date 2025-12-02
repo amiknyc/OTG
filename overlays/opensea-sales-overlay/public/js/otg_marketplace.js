@@ -32,6 +32,8 @@ async function initMarketplaceOverlay() {
 
 // ==== OPENSEA LIQUID COLOR BACKGROUND ====
 
+// ==== OPENSEA FLUID MESH BACKGROUND WITH NOISE ====
+
 function initOpenSeaMesh() {
   const canvas = document.getElementById("opensea-mesh-canvas");
   if (!canvas) return;
@@ -55,100 +57,164 @@ function initOpenSeaMesh() {
   window.addEventListener("resize", resize);
   resize();
 
+  // --- Simple smooth 1D value noise (Perlin-ish) ---
+
+  function make1DNoise(size = 256) {
+    const values = new Float32Array(size);
+    for (let i = 0; i < size; i++) {
+      values[i] = Math.random(); // seeded per page load
+    }
+
+    function smoothstep(t) {
+      // smootherstep-ish curve
+      return t * t * (3 - 2 * t);
+    }
+
+    return function noise(x) {
+      // wrap index so it loops
+      const s = size;
+      const xf = x % s;
+      const i0 = Math.floor(xf);
+      const i1 = (i0 + 1) % s;
+      const t = smoothstep(xf - i0);
+      const v0 = values[i0];
+      const v1 = values[i1];
+      return v0 + (v1 - v0) * t; // 0..1 smooth noise
+    };
+  }
+
+  const noiseX = make1DNoise();
+  const noiseY = make1DNoise();
+  const noiseR = make1DNoise();
+
   const BASE_FILL = "rgba(3, 7, 18, 0.96)"; // deep dark background
-  const TIME_SCALE = 0.0011;               // global animation speed (lower = slower)
+  const TIME_SCALE = 0.0010;               // global animation speed
+
+  const maxDimBase = () => Math.max(width, height);
+
+  // Blobs with orbit + noise modulation
+  const blobs = [
+    {
+      // teal / cyan blob
+      orbitRadiusX: 0.28,
+      orbitRadiusY: 0.22,
+      angleSpeed: 0.16,
+      phase: 0.0,
+      sizeFactor: 1.0,
+      wobbleSpeed: 1.4,
+      wobblePhase: 0.8,
+      noiseSpeed: 0.35,
+      noiseAmpPos: 0.06,   // amplitude as fraction of width/height
+      noiseAmpRad: 0.18,   // radius noise strength
+      noiseOffset: Math.random() * 1000,
+      inner: "rgba(56, 189, 248, 0.75)",  // cyan-ish
+      mid:   "rgba(56, 189, 248, 0.25)",
+      outer: "rgba(15, 23, 42, 0.0)"
+    },
+    {
+      // indigo / violet blob
+      orbitRadiusX: 0.25,
+      orbitRadiusY: 0.30,
+      angleSpeed: -0.13,
+      phase: 2.2,
+      sizeFactor: 0.95,
+      wobbleSpeed: 1.1,
+      wobblePhase: 1.6,
+      noiseSpeed: 0.28,
+      noiseAmpPos: 0.05,
+      noiseAmpRad: 0.16,
+      noiseOffset: Math.random() * 1000 + 200,
+      inner: "rgba(129, 140, 248, 0.80)", // indigo-ish
+      mid:   "rgba(129, 140, 248, 0.32)",
+      outer: "rgba(15, 23, 42, 0.0)"
+    },
+    {
+      // magenta accent blob
+      orbitRadiusX: 0.21,
+      orbitRadiusY: 0.26,
+      angleSpeed: 0.19,
+      phase: 4.0,
+      sizeFactor: 0.8,
+      wobbleSpeed: 1.7,
+      wobblePhase: 3.3,
+      noiseSpeed: 0.42,
+      noiseAmpPos: 0.07,
+      noiseAmpRad: 0.22,
+      noiseOffset: Math.random() * 1000 + 400,
+      inner: "rgba(236, 72, 153, 0.85)",  // pink-ish
+      mid:   "rgba(236, 72, 153, 0.35)",
+      outer: "rgba(15, 23, 42, 0.0)"
+    },
+    {
+      // deeper blue support blob
+      orbitRadiusX: 0.33,
+      orbitRadiusY: 0.18,
+      angleSpeed: -0.09,
+      phase: 5.4,
+      sizeFactor: 0.7,
+      wobbleSpeed: 0.8,
+      wobblePhase: 2.6,
+      noiseSpeed: 0.24,
+      noiseAmpPos: 0.05,
+      noiseAmpRad: 0.14,
+      noiseOffset: Math.random() * 1000 + 800,
+      inner: "rgba(59, 130, 246, 0.65)",  // blue-ish
+      mid:   "rgba(59, 130, 246, 0.25)",
+      outer: "rgba(15, 23, 42, 0.0)"
+    }
+  ];
 
   function draw(timestamp) {
     if (!canvas.isConnected) return;
 
     const t = timestamp * TIME_SCALE;
+    const maxDim = maxDimBase();
+    const baseRadius = maxDim * 0.75;
 
-    // Clear with a dark base so we keep the page overall dark
+    // Global “breathing” + subtle twist so the field morphs
+    const globalPulse = 0.86 + 0.14 * Math.sin(t * 0.8);
+    const globalTwist = 0.18 * Math.sin(t * 0.35);
+
+    // Clear with dark base
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = BASE_FILL;
     ctx.fillRect(0, 0, width, height);
 
-    // Use additive blending so colors "melt" into each other
+    // Additive blending so blobs feel like light in liquid
     ctx.globalCompositeOperation = "lighter";
 
-    const maxDim = Math.max(width, height);
-    const baseRadius = maxDim * 0.75;
-
-    // Slow global breathing / warping factor so the whole field morphs
-    const globalPulse = 0.85 + 0.15 * Math.sin(t * 0.9);
-    const globalTwist = 0.2 * Math.sin(t * 0.4); // slight rotation / skew
-
-    const blobs = [
-      {
-        // teal / cyan blob
-        orbitRadiusX: 0.3,
-        orbitRadiusY: 0.22,
-        angleSpeed: 0.18,
-        phase: 0.0,
-        sizeFactor: 1.0,
-        wobbleSpeed: 1.4,
-        wobblePhase: 0.7,
-        inner: "rgba(56, 189, 248, 0.75)",  // cyan-ish
-        mid:   "rgba(56, 189, 248, 0.25)",
-        outer: "rgba(15, 23, 42, 0.0)"
-      },
-      {
-        // indigo / violet blob
-        orbitRadiusX: 0.28,
-        orbitRadiusY: 0.30,
-        angleSpeed: -0.14,
-        phase: 2.1,
-        sizeFactor: 0.95,
-        wobbleSpeed: 1.1,
-        wobblePhase: 1.9,
-        inner: "rgba(129, 140, 248, 0.80)", // indigo-ish
-        mid:   "rgba(129, 140, 248, 0.32)",
-        outer: "rgba(15, 23, 42, 0.0)"
-      },
-      {
-        // magenta accent blob
-        orbitRadiusX: 0.22,
-        orbitRadiusY: 0.26,
-        angleSpeed: 0.21,
-        phase: 4.0,
-        sizeFactor: 0.8,
-        wobbleSpeed: 1.7,
-        wobblePhase: 3.3,
-        inner: "rgba(236, 72, 153, 0.85)",  // pink-ish
-        mid:   "rgba(236, 72, 153, 0.35)",
-        outer: "rgba(15, 23, 42, 0.0)"
-      },
-      {
-        // deeper blue support blob to add complexity
-        orbitRadiusX: 0.35,
-        orbitRadiusY: 0.18,
-        angleSpeed: -0.09,
-        phase: 5.4,
-        sizeFactor: 0.7,
-        wobbleSpeed: 0.8,
-        wobblePhase: 2.6,
-        inner: "rgba(59, 130, 246, 0.65)",  // blue-ish
-        mid:   "rgba(59, 130, 246, 0.25)",
-        outer: "rgba(15, 23, 42, 0.0)"
-      }
-    ];
-
     for (const blob of blobs) {
-      // Orbit around center, but not just left-right:
-      // use different X/Y radii and a small global twist so paths curve.
+      // Orbital component
       const angle = t * blob.angleSpeed + blob.phase;
       const orbitX =
         Math.cos(angle + globalTwist) * width * blob.orbitRadiusX;
       const orbitY =
         Math.sin(angle * 1.07 - globalTwist) * height * blob.orbitRadiusY;
 
-      const cx = width * 0.5 + orbitX;
-      const cy = height * 0.5 + orbitY;
+      // Noise time (each blob has its own channel)
+      const nt = t * blob.noiseSpeed + blob.noiseOffset;
 
-      // Local wobble on size so shapes "breathe" independently
+      // Position noise: centered around 0, scaled to viewport
+      const nx =
+        (noiseX(nt) - 0.5) * blob.noiseAmpPos * width;
+      const ny =
+        (noiseY(nt + 37.1) - 0.5) * blob.noiseAmpPos * height;
+
+      const cx = width * 0.5 + orbitX + nx;
+      const cy = height * 0.5 + orbitY + ny;
+
+      // Radius breathing + noise
       const localPulse =
         0.9 + 0.1 * Math.sin(t * blob.wobbleSpeed + blob.wobblePhase);
-      const r = baseRadius * blob.sizeFactor * globalPulse * localPulse;
+      const rNoiseFactor =
+        1 + (noiseR(nt + 113.7) - 0.5) * blob.noiseAmpRad;
+
+      const r =
+        baseRadius *
+        blob.sizeFactor *
+        globalPulse *
+        localPulse *
+        rNoiseFactor;
 
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
       g.addColorStop(0.0, blob.inner);
@@ -166,7 +232,6 @@ function initOpenSeaMesh() {
 
   requestAnimationFrame(draw);
 }
-
 
 // ==== MARKETPLACE FETCH + RENDER ====
 
