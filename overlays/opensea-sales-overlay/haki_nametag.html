@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>cryptohaki Logo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    /* ===== PAGE LAYOUT ===== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: #000; /* match your stream background */
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end; /* put it near bottom like your screenshot */
+      padding-bottom: 40px;
+    }
+
+    /* ===== FONT FACE (update paths to your actual font files) ===== */
+    @font-face {
+      font-family: "Magneto";
+      src: url("/public/fonts/MAGNETOB.woff") format("woff");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* ===== LOGO STYLE ===== */
+    .cryptohaki-logo {
+      font-family: "Magneto", system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      font-size: 200px;
+      font-weight: 700;
+      text-transform: lowercase;
+      margin: 0;
+
+      /* animated dark-steel gradient similar to your overlay */
+      background: linear-gradient(
+        120deg,
+        #020617,
+        #020617,
+        #0b1120,
+        #111827,
+        #1f2937,
+        #4b5563,
+        #020617
+      );
+      background-size: 300% 300%;
+
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+
+      animation: cryptohakiGradient 14s ease-in-out infinite alternate;
+
+      opacity: 0.9;
+      filter: drop-shadow(0 0 16px rgba(0, 0, 0, 0.8));
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    @keyframes cryptohakiGradient {
+      0%   { background-position:   0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position:   0% 50%; }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="cryptohaki-logo">cryptohaki</h1>
+</body>
+</html>
