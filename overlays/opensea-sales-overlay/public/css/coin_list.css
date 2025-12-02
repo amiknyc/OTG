@@ -28,9 +28,6 @@ body {
   width: 520px;
   max-width: 100vw;
   padding: 18px 20px 16px;
-  box-shadow:
-    0 32px 90px rgba(0, 0, 0, 0.95),
-    0 0 0 1px rgba(15, 23, 42, 0.9);
 }
 
 /* Background image layer */

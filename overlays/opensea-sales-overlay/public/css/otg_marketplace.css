@@ -60,9 +60,6 @@ body {
   padding: 14px 18px 10px;
   background: radial-gradient(circle at top left, #020617, #020314);
   border: 1px solid rgba(148, 163, 184, 0.22);
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.85),
-    0 0 0 1px rgba(15, 23, 42, 0.8);
   overflow: hidden;
 }
 
