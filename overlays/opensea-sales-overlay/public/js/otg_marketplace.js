@@ -55,73 +55,109 @@ function initOpenSeaMesh() {
   window.addEventListener("resize", resize);
   resize();
 
-  const BASE_FILL = "rgba(3, 7, 18, 0.96)"; // deep slate, keeps it dark
-  const SPEED = 0.00035; // overall animation speed (smaller = slower)
+  const BASE_FILL = "rgba(3, 7, 18, 0.96)"; // deep dark background
+  const TIME_SCALE = 0.0011;               // global animation speed (lower = slower)
 
   function draw(timestamp) {
     if (!canvas.isConnected) return;
 
-    const t = timestamp * SPEED;
+    const t = timestamp * TIME_SCALE;
 
-    // Soft base so the blobs have something to blend into
+    // Clear with a dark base so we keep the page overall dark
     ctx.globalCompositeOperation = "source-over";
     ctx.fillStyle = BASE_FILL;
     ctx.fillRect(0, 0, width, height);
 
-    // Switch to additive blending so colors feel like light in liquid
+    // Use additive blending so colors "melt" into each other
     ctx.globalCompositeOperation = "lighter";
 
     const maxDim = Math.max(width, height);
-    const rBig = maxDim * 0.9;
-    const rMed = maxDim * 0.75;
-    const rSmall = maxDim * 0.6;
+    const baseRadius = maxDim * 0.75;
+
+    // Slow global breathing / warping factor so the whole field morphs
+    const globalPulse = 0.85 + 0.15 * Math.sin(t * 0.9);
+    const globalTwist = 0.2 * Math.sin(t * 0.4); // slight rotation / skew
 
     const blobs = [
       {
-        // cyan / teal blob
-        cx: width * 0.2 + Math.sin(t * 1.4) * width * 0.25,
-        cy: height * 0.3 + Math.cos(t * 1.1) * height * 0.18,
-        r: rBig,
-        inner: "rgba(56, 189, 248, 0.75)",   // cyan-400-ish
+        // teal / cyan blob
+        orbitRadiusX: 0.3,
+        orbitRadiusY: 0.22,
+        angleSpeed: 0.18,
+        phase: 0.0,
+        sizeFactor: 1.0,
+        wobbleSpeed: 1.4,
+        wobblePhase: 0.7,
+        inner: "rgba(56, 189, 248, 0.75)",  // cyan-ish
         mid:   "rgba(56, 189, 248, 0.25)",
         outer: "rgba(15, 23, 42, 0.0)"
       },
       {
         // indigo / violet blob
-        cx: width * 0.75 + Math.cos(t * 0.9 + 1.7) * width * 0.22,
-        cy: height * 0.25 + Math.sin(t * 1.3 + 0.8) * height * 0.22,
-        r: rMed,
-        inner: "rgba(129, 140, 248, 0.80)", // indigo-400-ish
+        orbitRadiusX: 0.28,
+        orbitRadiusY: 0.30,
+        angleSpeed: -0.14,
+        phase: 2.1,
+        sizeFactor: 0.95,
+        wobbleSpeed: 1.1,
+        wobblePhase: 1.9,
+        inner: "rgba(129, 140, 248, 0.80)", // indigo-ish
         mid:   "rgba(129, 140, 248, 0.32)",
         outer: "rgba(15, 23, 42, 0.0)"
       },
       {
-        // magenta / accent blob
-        cx: width * 0.55 + Math.sin(t * 1.1 + 3.4) * width * 0.18,
-        cy: height * 0.7 + Math.cos(t * 0.7 + 2.1) * height * 0.25,
-        r: rSmall,
-        inner: "rgba(236, 72, 153, 0.85)",  // pink-500-ish
+        // magenta accent blob
+        orbitRadiusX: 0.22,
+        orbitRadiusY: 0.26,
+        angleSpeed: 0.21,
+        phase: 4.0,
+        sizeFactor: 0.8,
+        wobbleSpeed: 1.7,
+        wobblePhase: 3.3,
+        inner: "rgba(236, 72, 153, 0.85)",  // pink-ish
         mid:   "rgba(236, 72, 153, 0.35)",
+        outer: "rgba(15, 23, 42, 0.0)"
+      },
+      {
+        // deeper blue support blob to add complexity
+        orbitRadiusX: 0.35,
+        orbitRadiusY: 0.18,
+        angleSpeed: -0.09,
+        phase: 5.4,
+        sizeFactor: 0.7,
+        wobbleSpeed: 0.8,
+        wobblePhase: 2.6,
+        inner: "rgba(59, 130, 246, 0.65)",  // blue-ish
+        mid:   "rgba(59, 130, 246, 0.25)",
         outer: "rgba(15, 23, 42, 0.0)"
       }
     ];
 
     for (const blob of blobs) {
-      const g = ctx.createRadialGradient(
-        blob.cx,
-        blob.cy,
-        0,
-        blob.cx,
-        blob.cy,
-        blob.r
-      );
+      // Orbit around center, but not just left-right:
+      // use different X/Y radii and a small global twist so paths curve.
+      const angle = t * blob.angleSpeed + blob.phase;
+      const orbitX =
+        Math.cos(angle + globalTwist) * width * blob.orbitRadiusX;
+      const orbitY =
+        Math.sin(angle * 1.07 - globalTwist) * height * blob.orbitRadiusY;
+
+      const cx = width * 0.5 + orbitX;
+      const cy = height * 0.5 + orbitY;
+
+      // Local wobble on size so shapes "breathe" independently
+      const localPulse =
+        0.9 + 0.1 * Math.sin(t * blob.wobbleSpeed + blob.wobblePhase);
+      const r = baseRadius * blob.sizeFactor * globalPulse * localPulse;
+
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
       g.addColorStop(0.0, blob.inner);
-      g.addColorStop(0.45, blob.mid);
+      g.addColorStop(0.5, blob.mid);
       g.addColorStop(1.0, blob.outer);
 
       ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.arc(blob.cx, blob.cy, blob.r, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -130,6 +166,7 @@ function initOpenSeaMesh() {
 
   requestAnimationFrame(draw);
 }
+
 
 // ==== MARKETPLACE FETCH + RENDER ====
 
