@@ -5,6 +5,12 @@
   <title>cryptohaki Nametag</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Magneto Bold from db.onlinewebfonts.com -->
+  <link
+    href="https://db.onlinewebfonts.com/c/e564ab2a94b273e5648ff05697eccad2?family=Magneto+Bold"
+    rel="stylesheet"
+  />
+
   <style>
     /* ===== PAGE LAYOUT – TRANSPARENT BACKGROUND ===== */
     html,
@@ -13,8 +19,8 @@
       padding: 0;
       height: 100%;
       width: 100%;
-      background: transparent;          /* key change */
-      background-color: transparent;    /* for safety */
+      background: transparent;
+      background-color: transparent;
       overflow: hidden;
     }
 
@@ -25,18 +31,9 @@
       padding-bottom: 40px;
     }
 
-    /* ===== FONT FACE (update paths if needed) ===== */
-    @font-face {
-      font-family: "Magneto";
-      src: url("/public/fonts/MAGNETOB.woff") format("woff");
-      font-weight: 700;
-      font-style: normal;
-      font-display: swap;
-    }
-
     /* ===== LOGO STYLE ===== */
     .cryptohaki-logo {
-      font-family: "Magneto", system-ui, -apple-system, BlinkMacSystemFont,
+      font-family: "Magneto Bold", system-ui, -apple-system, BlinkMacSystemFont,
         "Segoe UI", sans-serif;
       font-size: 200px;
       font-weight: 700;
