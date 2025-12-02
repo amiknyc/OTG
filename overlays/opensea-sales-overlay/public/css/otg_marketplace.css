@@ -76,7 +76,7 @@ body {
   display: block;
 
   /* Stronger presence than the old grid, but still behind content */
-  opacity: 0.15;
+  opacity: 0.10;
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 0;
