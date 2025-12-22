@@ -1,35 +1,72 @@
-/* Teardrop Map overlay page
-   Goal: show the SVG at its native size and allow scrolling/panning via browser scrollbars.
-*/
-
 html,
 body {
   width: 100%;
   height: 100%;
   margin: 0;
   background: transparent;
-  overflow: auto; /* <-- allow scroll */
 }
 
-/* Full viewport scroll container */
-#teardrop-overlay {
-  width: 100vw;
-  height: 100vh;
-  overflow: auto; /* <-- allow scroll inside the stage too */
+.teardrop-body {
   background: transparent;
 }
 
-/* IMPORTANT:
-   - remove object-fit
-   - remove width/height: 100%
-   - allow the image to keep its intrinsic dimensions
-*/
+/* Stage fills the viewport */
+#teardrop-overlay {
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+
+  /* Default: fit mode (no scroll/pan) */
+  overflow: hidden;
+
+  display: grid;
+  place-items: center;
+
+  position: relative;
+  cursor: zoom-in;
+}
+
+/* Default: fit-to-screen */
 .teardrop-map {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* fit the whole map */
   display: block;
+
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Zoomed: show at intrinsic size, allow scrolling/panning */
+#teardrop-overlay.is-zoomed {
+  overflow: auto; /* enables scrollbars + drag-to-pan via JS */
+  place-items: start; /* anchor top-left so scrolling behaves predictably */
+  cursor: grab;
+}
+
+#teardrop-overlay.is-zoomed.is-dragging {
+  cursor: grabbing;
+}
+
+/* In zoom mode, stop forcing the image to fit the viewport */
+#teardrop-overlay.is-zoomed .teardrop-map {
   width: auto;
   height: auto;
   max-width: none;
   max-height: none;
-  user-select: none;
-  -webkit-user-drag: none;
+  object-fit: initial;
+}
+
+/* Small usage hint (optional) */
+.teardrop-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  padding: 6px 10px;
+  font: 12px/1.2 "Kode Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
 }

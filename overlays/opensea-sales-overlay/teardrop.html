@@ -2,41 +2,92 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CryptoHaki | Teardrop Map</title>
+    <title>Teardrop Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Google Fonts: Kode Mono + Major Mono Display (consistent with the rest) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&family=Major+Mono+Display&display=swap"
-      rel="stylesheet"
-    />
-
-    <!-- Shared base styles (keeps overlays transparent) -->
     <link rel="stylesheet" href="public/css/base.css" />
-    <!-- Teardrop module only -->
     <link rel="stylesheet" href="public/css/teardrop.css" />
   </head>
 
   <body class="teardrop-body">
     <main id="teardrop-overlay" aria-label="Teardrop Map">
-      <!-- Preferred: renamed file (no spaces) -->
       <img
+        id="teardrop-map"
         class="teardrop-map"
-        src="/public/assets/teardrop_map.svg"
+        src="/public/assets/teardrop-map.svg"
         alt="Teardrop Map"
         draggable="false"
       />
-
-      <!-- If you keep the original filename with a space, use this instead:
-      <img
-        class="teardrop-map"
-        src="/public/assets/Teardrop%20Map.svg"
-        alt="Teardrop Map"
-        draggable="false"
-      />
-      -->
+      <div class="teardrop-hint">Click to zoom. Drag to pan. Click again to fit.</div>
     </main>
+
+    <script>
+      (function () {
+        const stage = document.getElementById("teardrop-overlay");
+        const img = document.getElementById("teardrop-map");
+
+        // Toggle zoom (fit <-> full size)
+        function toggleZoom() {
+          const zoomed = stage.classList.toggle("is-zoomed");
+
+          // When entering zoom, center the scroll position after layout updates
+          if (zoomed) {
+            requestAnimationFrame(() => {
+              stage.scrollLeft = (img.scrollWidth - stage.clientWidth) / 2;
+              stage.scrollTop = (img.scrollHeight - stage.clientHeight) / 2;
+            });
+          } else {
+            stage.scrollLeft = 0;
+            stage.scrollTop = 0;
+          }
+        }
+
+        // Click to toggle zoom (ignore clicks that are actually drags)
+        let moved = false;
+        stage.addEventListener("click", (e) => {
+          if (moved) return; // suppress click after drag
+          toggleZoom();
+        });
+
+        // Drag-to-pan when zoomed
+        let isDown = false;
+        let startX = 0, startY = 0;
+        let startScrollLeft = 0, startScrollTop = 0;
+
+        stage.addEventListener("mousedown", (e) => {
+          if (!stage.classList.contains("is-zoomed")) return;
+          isDown = true;
+          moved = false;
+          stage.classList.add("is-dragging");
+          startX = e.clientX;
+          startY = e.clientY;
+          startScrollLeft = stage.scrollLeft;
+          startScrollTop = stage.scrollTop;
+          e.preventDefault();
+        });
+
+        window.addEventListener("mousemove", (e) => {
+          if (!isDown) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+          stage.scrollLeft = startScrollLeft - dx;
+          stage.scrollTop = startScrollTop - dy;
+        });
+
+        window.addEventListener("mouseup", () => {
+          if (!isDown) return;
+          isDown = false;
+          stage.classList.remove("is-dragging");
+          // allow click again after drag ends
+          setTimeout(() => (moved = false), 0);
+        });
+
+        // Optional: ESC to return to fit
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") stage.classList.remove("is-zoomed");
+        });
+      })();
+    </script>
   </body>
 </html>
